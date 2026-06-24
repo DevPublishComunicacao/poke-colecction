@@ -1,0 +1,14 @@
+node_modules/
+pokecollection.db
+pokecollection.db-shm
+pokecollection.db-wal
+collections-data.json
+me4_pt_data.txt
+fetch_log.txt
+fetch_pt.mjs
+extract-data.mjs
+rebuild-data.mjs
+refactor-app.js
+temp_check_rarities.js
+*.log
+.DS_Store

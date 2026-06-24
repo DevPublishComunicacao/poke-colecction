@@ -1,0 +1,18 @@
+{
+  "name": "pokecolection",
+  "version": "2.0.0",
+  "description": "PokéCollection - Sistema de coleção de Pokémon TCG",
+  "main": "server.js",
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js",
+    "setup": "node server.js --setup"
+  },
+  "dependencies": {
+    "better-sqlite3": "^11.0.0",
+    "express": "^4.21.0"
+  }
+}
