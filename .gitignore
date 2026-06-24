@@ -2,7 +2,7 @@ node_modules/
 pokecollection.db
 pokecollection.db-shm
 pokecollection.db-wal
-collections-data.json
+seed-cache.json
 me4_pt_data.txt
 fetch_log.txt
 fetch_pt.mjs

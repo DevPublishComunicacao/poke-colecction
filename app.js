@@ -359,7 +359,7 @@ function renderCards() {
         return `
         <article class="${classes.join(' ')}" data-card-id="${card.id}" tabindex="0">
             <div class="card-img-wrapper">
-                <img src="${card.image}" alt="Carta de ${card.name}">
+                <img src="${card.image}" alt="Carta de ${card.name}" loading="lazy">
                 <button class="acquire-btn" data-acquire-id="${card.id}" aria-label="${acquired ? 'Remover' : 'Marcar'} como adquirida" title="${acquired ? 'Remover' : 'Marcar'} adquirida">
                     <i class="fa-solid fa-check"></i>
                 </button>

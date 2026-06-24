@@ -1,6 +1,9 @@
 const express = require('express');
 const Database = require('better-sqlite3');
 const path = require('path');
+const fs = require('fs');
+
+const CACHE_FILE = path.join(__dirname, 'seed-cache.json');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -81,47 +84,67 @@ function formatRetreat(n) {
     return '★'.repeat(parseInt(n, 10));
 }
 
-async function fetchTcgdexCards(lang) {
-    const cards = [];
-    const baseUrl = `https://api.tcgdex.net/v2/${lang}/cards/me04-`;
-    for (let i = 1; i <= 122; i++) {
-        const lid = i.toString().padStart(3, '0');
-        try {
-            const resp = await fetch(baseUrl + lid);
-            if (!resp.ok) continue;
-            const c = await resp.json();
-            const typeStr = c.types && c.types.length > 0 ? c.types[0] : '—';
-            const attacks = [];
-            if (c.abilities) {
-                for (const ab of c.abilities) {
-                    attacks.push({ name: escapeJs(ab.name) + ' (Habilidade)', damage: '', desc: escapeJs(ab.effect) });
-                }
-            }
-            if (c.attacks) {
-                for (const at of c.attacks) {
-                    attacks.push({ name: escapeJs(at.name), damage: at.damage || '', desc: escapeJs(at.effect || '—') });
-                }
-            }
-            cards.push({
-                id: 'me4-' + lid,
-                name: c.name || '',
-                number: lid,
-                total: '122',
-                image: 'assets/me4' + (lang === 'pt' ? '-pt' : '') + '-' + lid + '.webp',
-                type: typeStr,
-                hp: c.hp != null ? String(c.hp) : '-',
-                rarity: c.rarity || 'Comum',
-                stage: c.stage || '—',
-                weakness: c.weaknesses && c.weaknesses[0] ? formatWeakness(c.weaknesses[0]) : 'Nenhuma',
-                resistance: c.resistances && c.resistances[0] ? formatResistance(c.resistances[0]) : 'Nenhuma',
-                retreat: c.retreat != null ? formatRetreat(c.retreat) : '0',
-                attacks
-            });
-        } catch (e) {
-            console.error('Error fetching ' + lang + ' card ' + lid + ': ' + e.message);
+const CARD_IDS = Array.from({ length: 122 }, (_, i) => (i + 1).toString().padStart(3, '0'));
+
+function loadCardCache() {
+    try {
+        if (fs.existsSync(CACHE_FILE)) {
+            const data = JSON.parse(fs.readFileSync(CACHE_FILE, 'utf8'));
+            if (data && data.en && data.pt) return data;
+        }
+    } catch (_) {}
+    return null;
+}
+
+function saveCardCache(enCards, ptCards) {
+    try {
+        fs.writeFileSync(CACHE_FILE, JSON.stringify({ en: enCards, pt: ptCards }));
+    } catch (_) {}
+}
+
+async function fetchSingleCard(lang, lid) {
+    const resp = await fetch(`https://api.tcgdex.net/v2/${lang}/cards/me04-${lid}`);
+    if (!resp.ok) return null;
+    const c = await resp.json();
+    const attacks = [];
+    if (c.abilities) {
+        for (const ab of c.abilities) {
+            attacks.push({ name: escapeJs(ab.name) + ' (Habilidade)', damage: '', desc: escapeJs(ab.effect) });
         }
     }
-    return cards;
+    if (c.attacks) {
+        for (const at of c.attacks) {
+            attacks.push({ name: escapeJs(at.name), damage: at.damage || '', desc: escapeJs(at.effect || '—') });
+        }
+    }
+    return {
+        id: 'me4-' + lid,
+        name: c.name || '',
+        number: lid,
+        total: '122',
+        image: 'assets/me4' + (lang === 'pt' ? '-pt' : '') + '-' + lid + '.webp',
+        type: c.types && c.types.length > 0 ? c.types[0] : '—',
+        hp: c.hp != null ? String(c.hp) : '-',
+        rarity: c.rarity || 'Comum',
+        stage: c.stage || '—',
+        weakness: c.weaknesses && c.weaknesses[0] ? formatWeakness(c.weaknesses[0]) : 'Nenhuma',
+        resistance: c.resistances && c.resistances[0] ? formatResistance(c.resistances[0]) : 'Nenhuma',
+        retreat: c.retreat != null ? formatRetreat(c.retreat) : '0',
+        attacks
+    };
+}
+
+async function fetchTcgdexCards(lang) {
+    const batchSize = 30;
+    const results = [];
+    for (let i = 0; i < CARD_IDS.length; i += batchSize) {
+        const batch = CARD_IDS.slice(i, i + batchSize);
+        const cards = await Promise.all(batch.map(lid =>
+            fetchSingleCard(lang, lid).catch(() => null)
+        ));
+        results.push(...cards.filter(Boolean));
+    }
+    return results;
 }
 
 const SAMPLE_COLLECTIONS = [
@@ -157,10 +180,19 @@ async function seedDatabase(db) {
     const insertCard = db.prepare('INSERT INTO cards (id, collection_id, name, number, total, image, type, hp, rarity, stage, weakness, resistance, retreat, attacks, sort_order) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
 
     console.log('Fetching card data from TCGDex API...');
-    const [enCards, ptCards] = await Promise.all([
-        fetchTcgdexCards('en').catch(e => { console.error('Failed to fetch EN cards:', e.message); return []; }),
-        fetchTcgdexCards('pt').catch(e => { console.error('Failed to fetch PT cards:', e.message); return []; })
-    ]);
+    const cached = loadCardCache();
+    let enCards, ptCards;
+    if (cached) {
+        console.log('Using cached seed data');
+        enCards = cached.en;
+        ptCards = cached.pt;
+    } else {
+        [enCards, ptCards] = await Promise.all([
+            fetchTcgdexCards('en').catch(e => { console.error('Failed to fetch EN cards:', e.message); return []; }),
+            fetchTcgdexCards('pt').catch(e => { console.error('Failed to fetch PT cards:', e.message); return []; })
+        ]);
+        saveCardCache(enCards, ptCards);
+    }
 
     const allCollections = [
         ...SAMPLE_COLLECTIONS,
