@@ -1387,3 +1387,130 @@ body {
 @keyframes spin {
     to { transform: rotate(360deg); }
 }
+
+/* User Area */
+.user-area {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+}
+
+.user-btn {
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    color: var(--text-primary);
+    padding: 8px 16px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-family: 'Outfit', sans-serif;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.2s;
+}
+
+.user-btn:hover {
+    background: rgba(255,255,255,0.08);
+    border-color: var(--primary-color);
+}
+
+/* Auth Modal */
+.auth-modal-content {
+    max-width: 400px !important;
+}
+
+.auth-body {
+    padding: 32px;
+}
+
+.auth-body h2 {
+    font-family: 'Outfit', sans-serif;
+    font-size: 24px;
+    color: var(--text-primary);
+    margin: 0 0 24px;
+}
+
+.auth-form {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.auth-field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.auth-field label {
+    font-family: 'Outfit', sans-serif;
+    font-size: 13px;
+    color: var(--text-secondary);
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+}
+
+.auth-field input {
+    background: var(--bg-dark);
+    border: 1px solid var(--border-color);
+    color: var(--text-primary);
+    padding: 12px 16px;
+    border-radius: 8px;
+    font-family: 'Outfit', sans-serif;
+    font-size: 15px;
+    outline: none;
+    transition: border-color 0.2s;
+}
+
+.auth-field input:focus {
+    border-color: var(--primary-color);
+}
+
+.auth-error {
+    font-family: 'Outfit', sans-serif;
+    font-size: 13px;
+    color: #ff4444;
+    min-height: 20px;
+}
+
+.auth-submit {
+    background: var(--primary-color);
+    border: none;
+    color: white;
+    padding: 12px;
+    border-radius: 8px;
+    font-family: 'Outfit', sans-serif;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.auth-submit:hover {
+    background: #4a48d9;
+}
+
+.auth-toggle {
+    font-family: 'Outfit', sans-serif;
+    font-size: 14px;
+    color: var(--text-secondary);
+    text-align: center;
+    margin: 20px 0 0;
+}
+
+.auth-link {
+    background: none;
+    border: none;
+    color: var(--primary-color);
+    cursor: pointer;
+    font-family: 'Outfit', sans-serif;
+    font-size: 14px;
+    text-decoration: underline;
+    padding: 0;
+    margin-left: 4px;
+}
+
+.auth-link:hover {
+    color: var(--accent-gold);
+}

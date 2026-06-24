@@ -2,14 +2,55 @@
 
 let collectionsData = [];
 
+// Auth state
+let _authToken = null;
+let _authUser = null;
+
+function getToken() {
+    if (!_authToken) _authToken = localStorage.getItem('auth_token');
+    return _authToken;
+}
+
+function setToken(token, user) {
+    _authToken = token;
+    _authUser = user;
+    if (token) localStorage.setItem('auth_token', token);
+    else localStorage.removeItem('auth_token');
+}
+
+function clearAuth() {
+    _authToken = null;
+    _authUser = null;
+    localStorage.removeItem('auth_token');
+}
+
+function authHeaders() {
+    const t = getToken();
+    return t ? { 'Authorization': 'Bearer ' + t, 'Content-Type': 'application/json' } : { 'Content-Type': 'application/json' };
+}
+
+function isLoggedIn() { return !!getToken(); }
+
+function updateUserUI() {
+    const span = document.getElementById('userName');
+    if (!span) return;
+    span.textContent = _authUser ? _authUser.username : 'Entrar';
+}
+
 // In-memory cache for stock & acquired (synced with server)
 let _stockCache = null;
 let _acquiredCache = null;
 let _dataInitialized = false;
 
 async function fetchAndCacheUserData(collectionId) {
+    if (!isLoggedIn()) {
+        _stockCache = {};
+        _acquiredCache = [];
+        _dataInitialized = true;
+        return;
+    }
     try {
-        const resp = await fetch('/api/user/all/' + collectionId);
+        const resp = await fetch('/api/user/all/' + collectionId, { headers: authHeaders() });
         if (!resp.ok) return;
         const data = await resp.json();
         _stockCache = data.stock || {};
@@ -23,10 +64,11 @@ async function fetchAndCacheUserData(collectionId) {
 }
 
 async function syncUserData(collectionId) {
+    if (!isLoggedIn()) return;
     try {
         await fetch('/api/user/all/' + collectionId, {
             method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
+            headers: authHeaders(),
             body: JSON.stringify({ stock: _stockCache || {}, acquired: _acquiredCache || [] })
         });
     } catch (e) {}
@@ -117,8 +159,94 @@ async function initApp() {
 
 document.addEventListener("DOMContentLoaded", () => {
     migrateAcquiredToQuantity();
+    initAuth();
     initApp();
 });
+
+// --- Auth Logic ---
+let _authMode = 'login';
+
+function initAuth() {
+    const stored = localStorage.getItem('auth_token');
+    if (stored) {
+        _authToken = stored;
+        try {
+            const payload = JSON.parse(atob(stored.split('.')[1]));
+            _authUser = { id: payload.userId, username: payload.username };
+        } catch (e) { clearAuth(); }
+    }
+    updateUserUI();
+
+    document.getElementById('userBtn').addEventListener('click', () => {
+        if (isLoggedIn()) {
+            clearAuth();
+            _stockCache = {};
+            _acquiredCache = [];
+            updateUserUI();
+            if (currentCollection) renderCards();
+            return;
+        }
+        openAuthModal();
+    });
+
+    document.getElementById('authModalClose').addEventListener('click', closeAuthModal);
+    document.getElementById('authModal').addEventListener('click', (e) => {
+        if (e.target === e.currentTarget) closeAuthModal();
+    });
+
+    document.getElementById('authToggleBtn').addEventListener('click', () => {
+        _authMode = _authMode === 'login' ? 'register' : 'login';
+        document.getElementById('authTitle').textContent = _authMode === 'login' ? 'Entrar' : 'Registrar';
+        document.getElementById('authSubmit').textContent = _authMode === 'login' ? 'Entrar' : 'Registrar';
+        document.getElementById('authToggleText').textContent = _authMode === 'login' ? 'Não tem conta?' : 'Já tem conta?';
+        document.getElementById('authToggleBtn').textContent = _authMode === 'login' ? 'Registrar' : 'Entrar';
+        document.getElementById('authError').textContent = '';
+    });
+
+    document.getElementById('authForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const username = document.getElementById('authUsername').value.trim();
+        const password = document.getElementById('authPassword').value;
+        const errorEl = document.getElementById('authError');
+        errorEl.textContent = '';
+        const endpoint = _authMode === 'login' ? '/api/auth/login' : '/api/auth/register';
+        try {
+            const resp = await fetch(endpoint, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username, password })
+            });
+            const data = await resp.json();
+            if (!resp.ok) {
+                errorEl.textContent = data.error || 'Erro desconhecido';
+                return;
+            }
+            setToken(data.token, data.user);
+            updateUserUI();
+            closeAuthModal();
+            document.getElementById('authUsername').value = '';
+            document.getElementById('authPassword').value = '';
+            // Reload user data for current collection
+            if (currentCollection) {
+                await fetchAndCacheUserData(currentCollection.id);
+                renderCards();
+            }
+        } catch (e) {
+            errorEl.textContent = 'Erro de conexão';
+        }
+    });
+}
+
+function openAuthModal() {
+    document.getElementById('authModal').classList.add('active');
+    document.getElementById('authModal').setAttribute('aria-hidden', 'false');
+    document.getElementById('authError').textContent = '';
+}
+
+function closeAuthModal() {
+    document.getElementById('authModal').classList.remove('active');
+    document.getElementById('authModal').setAttribute('aria-hidden', 'true');
+}
 
 const FINISH_LABELS = { none: 'Comum', holo: 'Foil', reverse: 'Reverse' };
 

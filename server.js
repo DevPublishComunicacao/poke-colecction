@@ -2,12 +2,16 @@ const express = require('express');
 const Database = require('better-sqlite3');
 const path = require('path');
 const fs = require('fs');
+const jwt = require('jsonwebtoken');
+const bcrypt = require('bcryptjs');
+const crypto = require('crypto');
 
 const CACHE_FILE = path.join(__dirname, 'seed-cache.json');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 const DB_PATH = process.env.DB_PATH || path.join(__dirname, 'pokecollection.db');
+const JWT_SECRET = process.env.JWT_SECRET || crypto.randomBytes(32).toString('hex');
 
 app.use(express.json());
 app.use(express.static(path.join(__dirname)));
@@ -45,23 +49,47 @@ function initDatabase() {
             FOREIGN KEY (collection_id) REFERENCES collections(id)
         );
 
+        CREATE TABLE IF NOT EXISTS users (
+            id TEXT PRIMARY KEY,
+            username TEXT NOT NULL UNIQUE,
+            password TEXT NOT NULL,
+            created_at TEXT NOT NULL DEFAULT (datetime('now'))
+        );
+
         CREATE TABLE IF NOT EXISTS user_stock (
+            user_id TEXT NOT NULL,
             collection_id TEXT NOT NULL,
             card_id TEXT NOT NULL,
             finish_none INTEGER NOT NULL DEFAULT 0,
             finish_holo INTEGER NOT NULL DEFAULT 0,
             finish_reverse INTEGER NOT NULL DEFAULT 0,
-            PRIMARY KEY (collection_id, card_id)
+            PRIMARY KEY (user_id, collection_id, card_id)
         );
 
         CREATE TABLE IF NOT EXISTS user_acquired (
+            user_id TEXT NOT NULL,
             collection_id TEXT NOT NULL,
             card_id TEXT NOT NULL,
-            PRIMARY KEY (collection_id, card_id)
+            PRIMARY KEY (user_id, collection_id, card_id)
         );
     `);
 
     return db;
+}
+
+function generateUserId() { return crypto.randomUUID(); }
+
+function authenticateToken(req, res, next) {
+    const auth = req.headers['authorization'];
+    const token = auth && auth.startsWith('Bearer ') ? auth.slice(7) : null;
+    if (!token) return res.status(401).json({ error: 'Token required' });
+    try {
+        const decoded = jwt.verify(token, JWT_SECRET);
+        req.user = decoded;
+        next();
+    } catch (e) {
+        return res.status(401).json({ error: 'Invalid token' });
+    }
 }
 
 function escapeJs(s) {
@@ -256,8 +284,33 @@ app.get('/api/collections/:id', (req, res) => {
     res.json({ ...col, cards: cards.map(c => ({ ...c, attacks: JSON.parse(c.attacks) })) });
 });
 
-app.get('/api/user/stock/:collectionId', (req, res) => {
-    const rows = db.prepare('SELECT card_id, finish_none, finish_holo, finish_reverse FROM user_stock WHERE collection_id = ?').all(req.params.collectionId);
+// --- Auth routes ---
+app.post('/api/auth/register', (req, res) => {
+    const { username, password } = req.body;
+    if (!username || !password) return res.status(400).json({ error: 'Username and password required' });
+    if (username.length < 3) return res.status(400).json({ error: 'Username must have at least 3 characters' });
+    if (password.length < 4) return res.status(400).json({ error: 'Password must have at least 4 characters' });
+    const existing = db.prepare('SELECT id FROM users WHERE username = ?').get(username);
+    if (existing) return res.status(409).json({ error: 'Username already taken' });
+    const id = generateUserId();
+    const hash = bcrypt.hashSync(password, 10);
+    db.prepare('INSERT INTO users (id, username, password) VALUES (?, ?, ?)').run(id, username, hash);
+    const token = jwt.sign({ userId: id, username }, JWT_SECRET, { expiresIn: '30d' });
+    res.status(201).json({ token, user: { id, username } });
+});
+
+app.post('/api/auth/login', (req, res) => {
+    const { username, password } = req.body;
+    if (!username || !password) return res.status(400).json({ error: 'Username and password required' });
+    const user = db.prepare('SELECT * FROM users WHERE username = ?').get(username);
+    if (!user || !bcrypt.compareSync(password, user.password)) return res.status(401).json({ error: 'Invalid username or password' });
+    const token = jwt.sign({ userId: user.id, username: user.username }, JWT_SECRET, { expiresIn: '30d' });
+    res.json({ token, user: { id: user.id, username: user.username } });
+});
+
+// --- User data routes (require auth) ---
+app.get('/api/user/stock/:collectionId', authenticateToken, (req, res) => {
+    const rows = db.prepare('SELECT card_id, finish_none, finish_holo, finish_reverse FROM user_stock WHERE user_id = ? AND collection_id = ?').all(req.user.userId, req.params.collectionId);
     const stock = {};
     for (const r of rows) {
         stock[r.card_id] = { none: r.finish_none, holo: r.finish_holo, reverse: r.finish_reverse };
@@ -265,34 +318,35 @@ app.get('/api/user/stock/:collectionId', (req, res) => {
     res.json(stock);
 });
 
-app.put('/api/user/stock/:collectionId', (req, res) => {
+app.put('/api/user/stock/:collectionId', authenticateToken, (req, res) => {
     const { collectionId } = req.params;
     const stock = req.body;
     const tx = db.transaction(() => {
-        db.prepare('DELETE FROM user_stock WHERE collection_id = ?').run(collectionId);
-        const insert = db.prepare('INSERT INTO user_stock (collection_id, card_id, finish_none, finish_holo, finish_reverse) VALUES (?, ?, ?, ?, ?)');
+        db.prepare('DELETE FROM user_stock WHERE user_id = ? AND collection_id = ?').run(req.user.userId, collectionId);
+        const insert = db.prepare('INSERT INTO user_stock (user_id, collection_id, card_id, finish_none, finish_holo, finish_reverse) VALUES (?, ?, ?, ?, ?, ?)');
         for (const [cardId, finishes] of Object.entries(stock)) {
-            insert.run(collectionId, cardId, finishes.none || 0, finishes.holo || 0, finishes.reverse || 0);
+            insert.run(req.user.userId, collectionId, cardId, finishes.none || 0, finishes.holo || 0, finishes.reverse || 0);
         }
     });
     tx();
     res.json({ ok: true });
 });
 
-app.get('/api/user/acquired/:collectionId', (req, res) => {
-    const rows = db.prepare('SELECT card_id FROM user_acquired WHERE collection_id = ? ORDER BY card_id').all(req.params.collectionId);
+app.get('/api/user/acquired/:collectionId', authenticateToken, (req, res) => {
+    const rows = db.prepare('SELECT card_id FROM user_acquired WHERE user_id = ? AND collection_id = ? ORDER BY card_id').all(req.user.userId, req.params.collectionId);
     res.json({ ids: rows.map(r => r.card_id) });
 });
 
-app.put('/api/user/acquired/:collectionId', (req, res) => {
+app.put('/api/user/acquired/:collectionId', authenticateToken, (req, res) => {
     const { collectionId } = req.params;
     const { ids } = req.body;
+    const userId = req.user.userId;
     const tx = db.transaction(() => {
-        db.prepare('DELETE FROM user_acquired WHERE collection_id = ?').run(collectionId);
+        db.prepare('DELETE FROM user_acquired WHERE user_id = ? AND collection_id = ?').run(userId, collectionId);
         if (ids && ids.length > 0) {
-            const insert = db.prepare('INSERT INTO user_acquired (collection_id, card_id) VALUES (?, ?)');
+            const insert = db.prepare('INSERT INTO user_acquired (user_id, collection_id, card_id) VALUES (?, ?, ?)');
             for (const cardId of ids) {
-                insert.run(collectionId, cardId);
+                insert.run(userId, collectionId, cardId);
             }
         }
     });
@@ -300,32 +354,34 @@ app.put('/api/user/acquired/:collectionId', (req, res) => {
     res.json({ ok: true });
 });
 
-app.get('/api/user/all/:collectionId', (req, res) => {
-    const stockRows = db.prepare('SELECT card_id, finish_none, finish_holo, finish_reverse FROM user_stock WHERE collection_id = ?').all(req.params.collectionId);
+app.get('/api/user/all/:collectionId', authenticateToken, (req, res) => {
+    const userId = req.user.userId;
+    const stockRows = db.prepare('SELECT card_id, finish_none, finish_holo, finish_reverse FROM user_stock WHERE user_id = ? AND collection_id = ?').all(userId, req.params.collectionId);
     const stock = {};
     for (const r of stockRows) {
         stock[r.card_id] = { none: r.finish_none, holo: r.finish_holo, reverse: r.finish_reverse };
     }
-    const acqRows = db.prepare('SELECT card_id FROM user_acquired WHERE collection_id = ? ORDER BY card_id').all(req.params.collectionId);
+    const acqRows = db.prepare('SELECT card_id FROM user_acquired WHERE user_id = ? AND collection_id = ? ORDER BY card_id').all(userId, req.params.collectionId);
     res.json({ stock, acquired: acqRows.map(r => r.card_id) });
 });
 
-app.put('/api/user/all/:collectionId', (req, res) => {
+app.put('/api/user/all/:collectionId', authenticateToken, (req, res) => {
     const { collectionId } = req.params;
     const { stock, acquired } = req.body;
+    const userId = req.user.userId;
     const tx = db.transaction(() => {
-        db.prepare('DELETE FROM user_stock WHERE collection_id = ?').run(collectionId);
-        db.prepare('DELETE FROM user_acquired WHERE collection_id = ?').run(collectionId);
+        db.prepare('DELETE FROM user_stock WHERE user_id = ? AND collection_id = ?').run(userId, collectionId);
+        db.prepare('DELETE FROM user_acquired WHERE user_id = ? AND collection_id = ?').run(userId, collectionId);
         if (stock) {
-            const insert = db.prepare('INSERT INTO user_stock (collection_id, card_id, finish_none, finish_holo, finish_reverse) VALUES (?, ?, ?, ?, ?)');
+            const insert = db.prepare('INSERT INTO user_stock (user_id, collection_id, card_id, finish_none, finish_holo, finish_reverse) VALUES (?, ?, ?, ?, ?, ?)');
             for (const [cardId, finishes] of Object.entries(stock)) {
-                insert.run(collectionId, cardId, finishes.none || 0, finishes.holo || 0, finishes.reverse || 0);
+                insert.run(userId, collectionId, cardId, finishes.none || 0, finishes.holo || 0, finishes.reverse || 0);
             }
         }
         if (acquired && acquired.length > 0) {
-            const insert = db.prepare('INSERT INTO user_acquired (collection_id, card_id) VALUES (?, ?)');
+            const insert = db.prepare('INSERT INTO user_acquired (user_id, collection_id, card_id) VALUES (?, ?, ?)');
             for (const cardId of acquired) {
-                insert.run(collectionId, cardId);
+                insert.run(userId, collectionId, cardId);
             }
         }
     });
@@ -333,22 +389,23 @@ app.put('/api/user/all/:collectionId', (req, res) => {
     res.json({ ok: true });
 });
 
-app.post('/api/migrate', (req, res) => {
+app.post('/api/migrate', authenticateToken, (req, res) => {
     const { collectionId, stock, acquired } = req.body;
+    const userId = req.user.userId;
     if (!collectionId) return res.status(400).json({ error: 'collectionId required' });
     const tx = db.transaction(() => {
-        db.prepare('DELETE FROM user_stock WHERE collection_id = ?').run(collectionId);
-        db.prepare('DELETE FROM user_acquired WHERE collection_id = ?').run(collectionId);
+        db.prepare('DELETE FROM user_stock WHERE user_id = ? AND collection_id = ?').run(userId, collectionId);
+        db.prepare('DELETE FROM user_acquired WHERE user_id = ? AND collection_id = ?').run(userId, collectionId);
         if (stock) {
-            const insert = db.prepare('INSERT INTO user_stock (collection_id, card_id, finish_none, finish_holo, finish_reverse) VALUES (?, ?, ?, ?, ?)');
+            const insert = db.prepare('INSERT INTO user_stock (user_id, collection_id, card_id, finish_none, finish_holo, finish_reverse) VALUES (?, ?, ?, ?, ?, ?)');
             for (const [cardId, finishes] of Object.entries(stock)) {
-                insert.run(collectionId, cardId, finishes.none || 0, finishes.holo || 0, finishes.reverse || 0);
+                insert.run(userId, collectionId, cardId, finishes.none || 0, finishes.holo || 0, finishes.reverse || 0);
             }
         }
         if (acquired && acquired.length > 0) {
-            const insert = db.prepare('INSERT INTO user_acquired (collection_id, card_id) VALUES (?, ?)');
+            const insert = db.prepare('INSERT INTO user_acquired (user_id, collection_id, card_id) VALUES (?, ?, ?)');
             for (const cardId of acquired) {
-                insert.run(collectionId, cardId);
+                insert.run(userId, collectionId, cardId);
             }
         }
     });
@@ -360,31 +417,33 @@ app.get('/health', (req, res) => {
     res.json({ status: 'ok', db: !!db.open });
 });
 
-app.get('/api/user/export/:collectionId', (req, res) => {
+app.get('/api/user/export/:collectionId', authenticateToken, (req, res) => {
     const { collectionId } = req.params;
-    const stockRows = db.prepare('SELECT card_id, finish_none, finish_holo, finish_reverse FROM user_stock WHERE collection_id = ?').all(collectionId);
+    const userId = req.user.userId;
+    const stockRows = db.prepare('SELECT card_id, finish_none, finish_holo, finish_reverse FROM user_stock WHERE user_id = ? AND collection_id = ?').all(userId, collectionId);
     const stock = {};
     for (const r of stockRows) stock[r.card_id] = { none: r.finish_none, holo: r.finish_holo, reverse: r.finish_reverse };
-    const acqRows = db.prepare('SELECT card_id FROM user_acquired WHERE collection_id = ? ORDER BY card_id').all(collectionId);
+    const acqRows = db.prepare('SELECT card_id FROM user_acquired WHERE user_id = ? AND collection_id = ? ORDER BY card_id').all(userId, collectionId);
     res.json({ collectionId, stock, acquired: acqRows.map(r => r.card_id), exportedAt: new Date().toISOString() });
 });
 
-app.post('/api/user/import/:collectionId', (req, res) => {
+app.post('/api/user/import/:collectionId', authenticateToken, (req, res) => {
     const { collectionId } = req.params;
     const { stock, acquired } = req.body;
+    const userId = req.user.userId;
     if (!stock && !acquired) return res.status(400).json({ error: 'Forneça stock e/ou acquired no body' });
     const tx = db.transaction(() => {
         if (stock) {
-            db.prepare('DELETE FROM user_stock WHERE collection_id = ?').run(collectionId);
-            const insert = db.prepare('INSERT INTO user_stock (collection_id, card_id, finish_none, finish_holo, finish_reverse) VALUES (?, ?, ?, ?, ?)');
+            db.prepare('DELETE FROM user_stock WHERE user_id = ? AND collection_id = ?').run(userId, collectionId);
+            const insert = db.prepare('INSERT INTO user_stock (user_id, collection_id, card_id, finish_none, finish_holo, finish_reverse) VALUES (?, ?, ?, ?, ?, ?)');
             for (const [cardId, finishes] of Object.entries(stock)) {
-                insert.run(collectionId, cardId, finishes.none || 0, finishes.holo || 0, finishes.reverse || 0);
+                insert.run(userId, collectionId, cardId, finishes.none || 0, finishes.holo || 0, finishes.reverse || 0);
             }
         }
         if (acquired && acquired.length > 0) {
-            db.prepare('DELETE FROM user_acquired WHERE collection_id = ?').run(collectionId);
-            const insert = db.prepare('INSERT INTO user_acquired (collection_id, card_id) VALUES (?, ?)');
-            for (const cardId of acquired) insert.run(collectionId, cardId);
+            db.prepare('DELETE FROM user_acquired WHERE user_id = ? AND collection_id = ?').run(userId, collectionId);
+            const insert = db.prepare('INSERT INTO user_acquired (user_id, collection_id, card_id) VALUES (?, ?, ?)');
+            for (const cardId of acquired) insert.run(userId, collectionId, cardId);
         }
     });
     tx();

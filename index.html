@@ -31,6 +31,13 @@
                 <h1>PokéCollection</h1>
             </div>
             
+            <div class="user-area" id="userArea">
+                <button class="user-btn" id="userBtn" aria-label="Login">
+                    <i class="fa-solid fa-user"></i>
+                    <span id="userName">Entrar</span>
+                </button>
+            </div>
+
             <!-- Collection Selector & Main Info Area -->
             <div class="collection-selector-wrapper">
                 <label class="select-label-top">COLEÇÃO</label>
@@ -74,6 +81,34 @@
                 <!-- Dynamically populated cards -->
             </div>
         </main>
+    </div>
+
+    <!-- Auth Modal -->
+    <div class="modal-overlay" id="authModal" role="dialog" aria-modal="true" aria-hidden="true">
+        <div class="modal-content auth-modal-content">
+            <button class="modal-close" id="authModalClose" aria-label="Fechar">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+            <div class="auth-body">
+                <h2 id="authTitle">Entrar</h2>
+                <form id="authForm" class="auth-form">
+                    <div class="auth-field">
+                        <label for="authUsername">Usuário</label>
+                        <input type="text" id="authUsername" autocomplete="username" minlength="3" required>
+                    </div>
+                    <div class="auth-field">
+                        <label for="authPassword">Senha</label>
+                        <input type="password" id="authPassword" autocomplete="current-password" minlength="4" required>
+                    </div>
+                    <div class="auth-error" id="authError"></div>
+                    <button type="submit" class="auth-submit" id="authSubmit">Entrar</button>
+                </form>
+                <p class="auth-toggle">
+                    <span id="authToggleText">Não tem conta?</span>
+                    <button class="auth-link" id="authToggleBtn">Registrar</button>
+                </p>
+            </div>
+        </div>
     </div>
 
     <!-- Modal for Detailed Card view -->
