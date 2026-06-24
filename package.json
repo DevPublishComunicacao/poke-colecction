@@ -4,7 +4,7 @@
   "description": "PokéCollection - Sistema de coleção de Pokémon TCG",
   "main": "server.js",
   "engines": {
-    "node": ">=18"
+    "node": "22.x"
   },
   "scripts": {
     "start": "node server.js",
