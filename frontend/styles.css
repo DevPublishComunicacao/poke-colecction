@@ -70,9 +70,7 @@ body {
 
 /* Sidebar / Header */
 .app-header {
-    background: rgba(10, 10, 18, 0.7);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
+    background: #0f0f1a;
     border-right: 1px solid var(--border-color);
     padding: 40px 30px;
     display: flex;
@@ -81,6 +79,7 @@ body {
     height: 100vh;
     position: sticky;
     top: 0;
+    z-index: 10;
 }
 
 .brand {
@@ -137,7 +136,7 @@ body {
 .custom-dropdown {
     position: relative;
     width: 100%;
-    z-index: 100;
+    z-index: 999;
 }
 
 .dropdown-trigger {
@@ -194,6 +193,7 @@ body {
     transition: var(--transition-smooth);
     box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
     overflow: hidden;
+    z-index: 9999;
 }
 
 .custom-dropdown.active .dropdown-menu {
