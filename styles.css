@@ -750,7 +750,8 @@ body {
 }
 .index-pill {
     flex: 0 0 auto;
-    padding: 4px 10px;
+    padding: 4px 6px;
+    min-width: 36px;
     border-radius: 8px;
     border: 1px solid var(--border-color);
     background: rgba(255,255,255,0.03);
@@ -761,6 +762,7 @@ body {
     cursor: pointer;
     transition: all 0.2s ease;
     line-height: 1.4;
+    text-align: center;
 }
 .index-pill:hover {
     background: rgba(255,255,255,0.08);
