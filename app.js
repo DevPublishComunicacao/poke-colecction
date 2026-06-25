@@ -522,9 +522,12 @@ function renderCards() {
     const indexBar = document.getElementById("cardIndexBar");
     if (indexBar) {
         const selNum = searchFilter.trim();
-        const numbers = currentCollection.cards.map(c => c.number);
+        const acqSet = new Set(getAcquiredCards());
         indexBar.innerHTML = `<button class="index-pill${!selNum ? ' active' : ''}" data-num="">Todas</button>` +
-            numbers.map(n => `<button class="index-pill${selNum === n ? ' active' : ''}" data-num="${n}">${n}</button>`).join('');
+            currentCollection.cards.map(c => {
+                const isAcq = acqSet.has(c.id);
+                return `<button class="index-pill${selNum === c.number ? ' active' : ''}${isAcq ? ' acquired' : ''}" data-num="${c.number}">${c.number}</button>`;
+            }).join('');
     }
 
     if (filtered.length === 0) {

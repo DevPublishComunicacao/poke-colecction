@@ -10,5 +10,6 @@ extract-data.mjs
 rebuild-data.mjs
 refactor-app.js
 temp_check_rarities.js
+.jwt_secret
 *.log
 .DS_Store
