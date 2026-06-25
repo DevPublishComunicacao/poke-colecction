@@ -239,6 +239,59 @@ function createDropdown(triggerId, menuId, selectedId, items, valueKey, labelKey
 }
 
 // --- Cascade logic ---
+async function onColecaoClear() {
+  selectedColecao = null;
+  selectedExpansao = null;
+  selectedPais = null;
+  expansoes = [];
+  paises = [];
+  currentCards = [];
+  document.getElementById('colecaoSelectedValue').textContent = 'Selecione...';
+  document.getElementById('colecaoSelectedValue').dataset.val = '';
+  document.getElementById('expansaoSelectedValue').textContent = 'Selecione...';
+  document.getElementById('expansaoSelectedValue').dataset.val = '';
+  document.getElementById('paisSelectedValue').textContent = 'Selecione...';
+  document.getElementById('paisSelectedValue').dataset.val = '';
+  const coMenu = document.getElementById('colecaoMenu');
+  if (coMenu) {
+    coMenu.querySelectorAll('.dropdown-item').forEach(el => el.classList.toggle('selected', !el.dataset.value));
+  }
+  document.getElementById('expansaoMenu').innerHTML = '<li class="dropdown-item selected" data-value="" role="option">Selecione...</li>';
+  document.getElementById('paisMenu').innerHTML = '<li class="dropdown-item selected" data-value="" role="option">Selecione...</li>';
+  updateHeaderInfo();
+  renderCards();
+  await saveAllPrefs();
+}
+
+async function onExpansaoClear() {
+  selectedExpansao = null;
+  selectedPais = null;
+  paises = [];
+  currentCards = [];
+  document.getElementById('expansaoSelectedValue').textContent = 'Selecione...';
+  document.getElementById('expansaoSelectedValue').dataset.val = '';
+  document.getElementById('paisSelectedValue').textContent = 'Selecione...';
+  document.getElementById('paisSelectedValue').dataset.val = '';
+  const exMenu = document.getElementById('expansaoMenu');
+  if (exMenu) {
+    exMenu.querySelectorAll('.dropdown-item').forEach(el => el.classList.toggle('selected', !el.dataset.value));
+  }
+  document.getElementById('paisMenu').innerHTML = '<li class="dropdown-item selected" data-value="" role="option">Selecione...</li>';
+  updateHeaderInfo();
+  renderCards();
+  await saveAllPrefs();
+}
+
+async function onPaisClear() {
+  selectedPais = null;
+  currentCards = [];
+  document.getElementById('paisSelectedValue').textContent = 'Selecione...';
+  document.getElementById('paisSelectedValue').dataset.val = '';
+  updateHeaderInfo();
+  renderCards();
+  await saveAllPrefs();
+}
+
 async function onColecaoSelect(colecao) {
   selectedColecao = colecao;
   selectedExpansao = null;
@@ -251,6 +304,10 @@ async function onColecaoSelect(colecao) {
   document.getElementById('paisSelectedValue').textContent = 'Selecione...';
   document.getElementById('paisSelectedValue').dataset.val = '';
   document.getElementById('colecaoSelectedValue').dataset.val = colecao.id;
+  const coMenu = document.getElementById('colecaoMenu');
+  if (coMenu) {
+    coMenu.querySelectorAll('.dropdown-item').forEach(el => el.classList.toggle('selected', el.dataset.value === String(colecao.id)));
+  }
 
   await loadExpansoes();
   updateHeaderInfo();
@@ -265,6 +322,10 @@ async function onExpansaoSelect(expansao) {
   currentCards = [];
   document.getElementById('expansaoSelectedValue').textContent = expansao.name;
   document.getElementById('expansaoSelectedValue').dataset.val = expansao.id;
+  const exMenu = document.getElementById('expansaoMenu');
+  if (exMenu) {
+    exMenu.querySelectorAll('.dropdown-item').forEach(el => el.classList.toggle('selected', el.dataset.value === String(expansao.id)));
+  }
   document.getElementById('paisSelectedValue').textContent = 'Selecione...';
   document.getElementById('paisSelectedValue').dataset.val = '';
 
@@ -278,6 +339,10 @@ async function onPaisSelect(pais) {
   selectedPais = pais;
   document.getElementById('paisSelectedValue').textContent = pais.name;
   document.getElementById('paisSelectedValue').dataset.val = pais.id;
+  const paMenu = document.getElementById('paisMenu');
+  if (paMenu) {
+    paMenu.querySelectorAll('.dropdown-item').forEach(el => el.classList.toggle('selected', el.dataset.value === String(pais.id)));
+  }
   await loadCards();
 }
 
@@ -289,9 +354,10 @@ async function loadExpansoes() {
   else expansoes = [];
   const eMenu = document.getElementById('expansaoMenu');
   if (eMenu) {
-    eMenu.innerHTML = expansoes.map(e =>
-      `<li class="dropdown-item${selectedExpansao && e.id === selectedExpansao.id ? ' selected' : ''}" data-value="${e.id}" role="option">${e.name}</li>`
-    ).join('');
+    eMenu.innerHTML = `<li class="dropdown-item${!selectedExpansao ? ' selected' : ''}" data-value="" role="option">Selecione...</li>` +
+      expansoes.map(e =>
+        `<li class="dropdown-item${selectedExpansao && e.id === selectedExpansao.id ? ' selected' : ''}" data-value="${e.id}" role="option">${e.name}</li>`
+      ).join('');
   }
 }
 
@@ -302,9 +368,10 @@ async function loadPaises() {
   else paises = [];
   const pMenu = document.getElementById('paisMenu');
   if (pMenu) {
-    pMenu.innerHTML = paises.map(p =>
-      `<li class="dropdown-item${selectedPais && p.id === selectedPais.id ? ' selected' : ''}" data-value="${p.id}" role="option">${p.name}</li>`
-    ).join('');
+    pMenu.innerHTML = `<li class="dropdown-item${!selectedPais ? ' selected' : ''}" data-value="" role="option">Selecione...</li>` +
+      paises.map(p =>
+        `<li class="dropdown-item${selectedPais && p.id === selectedPais.id ? ' selected' : ''}" data-value="${p.id}" role="option">${p.name}</li>`
+      ).join('');
   }
 }
 
@@ -437,9 +504,10 @@ function initColecaoDropdown() {
   const menu = document.getElementById('colecaoMenu');
   const selectedEl = document.getElementById('colecaoSelectedValue');
 
-  menu.innerHTML = colecoes.map(c =>
-    `<li class="dropdown-item${c.id === selectedColecao?.id ? ' selected' : ''}" data-value="${c.id}" role="option">${c.name}</li>`
-  ).join('');
+  menu.innerHTML = `<li class="dropdown-item${!selectedColecao ? ' selected' : ''}" data-value="" role="option">Selecione...</li>` +
+    colecoes.map(c =>
+      `<li class="dropdown-item${c.id === selectedColecao?.id ? ' selected' : ''}" data-value="${c.id}" role="option">${c.name}</li>`
+    ).join('');
 
   trigger.addEventListener('click', (e) => {
     e.stopPropagation();
@@ -457,10 +525,14 @@ function initColecaoDropdown() {
     const item = e.target.closest('.dropdown-item');
     if (!item) return;
     const val = item.dataset.value;
-    const colecao = colecoes.find(c => String(c.id) === val);
-    if (!colecao) return;
     trigger.closest('.custom-dropdown').classList.remove('active');
     trigger.setAttribute('aria-expanded', 'false');
+    if (!val) {
+      await onColecaoClear();
+      return;
+    }
+    const colecao = colecoes.find(c => String(c.id) === val);
+    if (!colecao) return;
     if (colecao.id === selectedColecao?.id) return;
     selectedEl.textContent = colecao.name;
     selectedEl.dataset.val = colecao.id;
@@ -484,10 +556,14 @@ document.addEventListener('click', async (e) => {
   if (expItem) {
     e.stopPropagation();
     const val = expItem.dataset.value;
-    const exp = expansoes.find(x => String(x.id) === val);
-    if (!exp || exp.id === selectedExpansao?.id) return;
     document.getElementById('expansaoDropdown').classList.remove('active');
     document.getElementById('expansaoTrigger').setAttribute('aria-expanded', 'false');
+    if (!val) {
+      await onExpansaoClear();
+      return;
+    }
+    const exp = expansoes.find(x => String(x.id) === val);
+    if (!exp || exp.id === selectedExpansao?.id) return;
     document.getElementById('expansaoSelectedValue').textContent = exp.name;
     document.getElementById('expansaoSelectedValue').dataset.val = exp.id;
     highlightDropdownItem('expansaoMenu', exp.id);
@@ -499,10 +575,14 @@ document.addEventListener('click', async (e) => {
   if (paisItem) {
     e.stopPropagation();
     const val = paisItem.dataset.value;
-    const pais = paises.find(x => String(x.id) === val);
-    if (!pais || pais.id === selectedPais?.id) return;
     document.getElementById('paisDropdown').classList.remove('active');
     document.getElementById('paisTrigger').setAttribute('aria-expanded', 'false');
+    if (!val) {
+      await onPaisClear();
+      return;
+    }
+    const pais = paises.find(x => String(x.id) === val);
+    if (!pais || pais.id === selectedPais?.id) return;
     document.getElementById('paisSelectedValue').textContent = pais.name;
     document.getElementById('paisSelectedValue').dataset.val = pais.id;
     highlightDropdownItem('paisMenu', pais.id);
