@@ -710,6 +710,40 @@ body {
     width: 320px;
 }
 
+/* Card index bar — horizontal number pills */
+.card-index-bar {
+    display: flex;
+    gap: 6px;
+    padding: 8px 16px 16px;
+    flex-wrap: wrap;
+    margin-top: -8px;
+}
+.index-pill {
+    flex: 0 0 auto;
+    padding: 4px 10px;
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+    background: rgba(255,255,255,0.03);
+    color: var(--text-secondary);
+    font-size: 11px;
+    font-weight: 600;
+    font-family: inherit;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    line-height: 1.4;
+}
+.index-pill:hover {
+    background: rgba(255,255,255,0.08);
+    border-color: rgba(255,255,255,0.2);
+    color: var(--text-primary);
+}
+.index-pill.active {
+    background: var(--primary-color);
+    border-color: var(--primary-color);
+    color: #fff;
+    box-shadow: 0 0 12px var(--primary-glow);
+}
+
 /* === Foil Badge === */
 .foil-badge {
     position: absolute;

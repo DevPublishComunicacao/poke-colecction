@@ -461,6 +461,11 @@ function renderCards() {
                 document.getElementById("markAllBtn").addEventListener("click", markAllAcquired);
                 document.getElementById("unmarkAllBtn").addEventListener("click", markAllUnacquired);
             }
+            // Card index bar
+            const bulkBar = document.querySelector(".bulk-bar");
+            if (bulkBar) {
+                bulkBar.insertAdjacentHTML("afterend", `<div class="card-index-bar" id="cardIndexBar"></div>`);
+            }
         }
     } else {
         const countEl = document.getElementById("bulkCount");
@@ -469,6 +474,15 @@ function renderCards() {
         if (markBtn) markBtn.textContent = acquiredCount === currentCollection.cards.length ? '' : 'Marcar todas';
         const unmarkBtn = document.getElementById("unmarkAllBtn");
         if (unmarkBtn) unmarkBtn.textContent = acquiredCount > 0 ? 'Desmarcar todas' : '';
+    }
+
+    // Card index bar — update number pills
+    const indexBar = document.getElementById("cardIndexBar");
+    if (indexBar) {
+        const selNum = searchFilter.trim();
+        const numbers = currentCollection.cards.map(c => c.number);
+        indexBar.innerHTML = `<button class="index-pill${!selNum ? ' active' : ''}" data-num="">Todas</button>` +
+            numbers.map(n => `<button class="index-pill${selNum === n ? ' active' : ''}" data-num="${n}">${n}</button>`).join('');
     }
 
     if (filtered.length === 0) {
@@ -552,6 +566,17 @@ function renderCards() {
         });
     });
 }
+
+// Index pill click handler (delegated)
+document.addEventListener("click", (e) => {
+    const pill = e.target.closest(".index-pill");
+    if (!pill) return;
+    const num = pill.dataset.num;
+    searchFilter = num;
+    const input = getSearchEl();
+    if (input) input.value = num;
+    renderCards();
+});
 
 // Modal and 3D Interaction details
 function openCardDetails(cardId) {
