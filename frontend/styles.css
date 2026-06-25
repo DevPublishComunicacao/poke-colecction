@@ -111,9 +111,15 @@ body {
     -webkit-text-fill-color: transparent;
 }
 
-/* Custom Styled Select */
-.collection-selector-wrapper {
-    position: relative;
+/* Cascade Selectors (Coleção, Expansão, País) */
+.cascade-selectors {
+    display: flex;
+    gap: 12px;
+}
+
+.selector-group {
+    flex: 1;
+    min-width: 0;
 }
 
 .select-label-top {
@@ -1468,6 +1474,10 @@ body {
     }
     .modal-content {
         padding: 0;
+    }
+    .cascade-selectors {
+        flex-direction: column;
+        gap: 16px;
     }
 }
 

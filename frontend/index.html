@@ -5,16 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="Explore coleções premium de cartas Pokémon com detalhes completos, imagens de alta resolução e estatísticas de coleções clássicas.">
     <title>PokéCollection - O Universo de Cartas Pokémon</title>
-    <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=Plus+Jakarta+Sans:wght@300;400;500;700&display=swap" rel="stylesheet">
-    <!-- FontAwesome for Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-    <!-- Background glow elements for premium aesthetics -->
     <div class="bg-glow bg-glow-1"></div>
     <div class="bg-glow bg-glow-2"></div>
 
@@ -24,13 +21,12 @@
     </div>
 
     <div class="app-container">
-        <!-- Sidebar or Header Panel -->
         <header class="app-header">
             <div class="brand">
                 <i class="fa-solid fa-circle-notch logo-icon"></i>
                 <h1>PokéCollection</h1>
             </div>
-            
+
             <div class="user-area" id="userArea">
                 <button class="user-btn" id="userBtn" aria-label="Login">
                     <i class="fa-solid fa-user"></i>
@@ -38,47 +34,60 @@
                 </button>
             </div>
 
-            <!-- Collection Selector & Main Info Area -->
-            <div class="collection-selector-wrapper">
-                <label class="select-label-top">COLEÇÃO</label>
-                <div class="custom-dropdown" id="collectionDropdown">
-                    <button class="dropdown-trigger" id="dropdownTrigger" aria-haspopup="listbox" aria-expanded="false" aria-label="Selecione a Coleção Pokémon">
-                        <span id="dropdownSelectedValue">Carregando...</span>
-                        <i class="fa-solid fa-chevron-down dropdown-arrow"></i>
-                    </button>
-                    <ul class="dropdown-menu" id="dropdownMenu" role="listbox" aria-label="Coleções Pokémon">
-                        <!-- Populated by JS -->
-                    </ul>
+            <!-- Cascade selectors: Coleção → Expansão → País -->
+            <div class="cascade-selectors">
+                <div class="selector-group">
+                    <label class="select-label-top">COLEÇÃO</label>
+                    <div class="custom-dropdown" id="colecaoDropdown">
+                        <button class="dropdown-trigger" id="colecaoTrigger" aria-haspopup="listbox" aria-expanded="false">
+                            <span id="colecaoSelectedValue">Carregando...</span>
+                            <i class="fa-solid fa-chevron-down dropdown-arrow"></i>
+                        </button>
+                        <ul class="dropdown-menu" id="colecaoMenu" role="listbox"></ul>
+                    </div>
+                </div>
+                <div class="selector-group">
+                    <label class="select-label-top">EXPANSÃO TEMÁTICA</label>
+                    <div class="custom-dropdown" id="expansaoDropdown">
+                        <button class="dropdown-trigger" id="expansaoTrigger" aria-haspopup="listbox" aria-expanded="false">
+                            <span id="expansaoSelectedValue">—</span>
+                            <i class="fa-solid fa-chevron-down dropdown-arrow"></i>
+                        </button>
+                        <ul class="dropdown-menu" id="expansaoMenu" role="listbox"></ul>
+                    </div>
+                </div>
+                <div class="selector-group">
+                    <label class="select-label-top">PAÍS</label>
+                    <div class="custom-dropdown" id="paisDropdown">
+                        <button class="dropdown-trigger" id="paisTrigger" aria-haspopup="listbox" aria-expanded="false">
+                            <span id="paisSelectedValue">—</span>
+                            <i class="fa-solid fa-chevron-down dropdown-arrow"></i>
+                        </button>
+                        <ul class="dropdown-menu" id="paisMenu" role="listbox"></ul>
+                    </div>
                 </div>
             </div>
 
-            <!-- Main Collection Header Info -->
-            <section class="collection-highlight" id="collectionHighlight" aria-labelledby="col-title">
-                <div class="col-meta">
-                    <span id="colYear" class="badge badge-year">---</span>
-                    <span id="colCountry" class="badge badge-country">---</span>
-                </div>
-                <h2 id="colName">Carregando Coleção...</h2>
-                <p id="colDesc">Detalhes da coleção selecionada serão exibidos aqui.</p>
+            <section class="collection-highlight" id="collectionHighlight">
+                <h2 id="colName">Carregando...</h2>
+                <p id="colDesc"></p>
                 <div class="col-stats">
                     <div class="stat-card">
                         <span class="stat-val" id="statTotal">0</span>
-                        <span class="stat-lbl">Cartas na Coleção</span>
+                        <span class="stat-lbl">Cartas</span>
                     </div>
                 </div>
             </section>
-
         </header>
 
-        <!-- Cards Display Area -->
         <main class="cards-display" id="cardsDisplayContainer">
             <div class="grid-header">
                 <h3>Visualização das Cartas</h3>
                 <span class="results-count" id="resultsCount">Exibindo 0 cartas</span>
             </div>
-            
+
             <div class="cards-grid" id="cardsGrid">
-                <!-- Dynamically populated cards -->
+                <!-- Populated by JS -->
             </div>
         </main>
     </div>
@@ -126,7 +135,7 @@
         </div>
     </div>
 
-    <!-- Modal for Detailed Card view -->
+    <!-- Card Detail Modal -->
     <div class="modal-overlay" id="cardModal" role="dialog" aria-modal="true" aria-hidden="true">
         <div class="modal-content">
             <button class="modal-close" id="modalClose" aria-label="Fechar Modal">
@@ -148,7 +157,7 @@
                         <h2 id="modalCardName">Nome do Pokémon</h2>
                         <span class="card-type-badge" id="modalCardType">Tipo</span>
                     </div>
-                    
+
                     <div class="card-specs" id="modalCardSpecs">
                         <div class="spec-item">
                             <span class="spec-label">HP</span>
@@ -166,7 +175,6 @@
 
                     <div class="card-stock" id="modalCardStock">
                         <div class="stock-items" id="modalStockItems">
-                            <!-- Populated dynamically -->
                         </div>
                     </div>
 
@@ -180,7 +188,6 @@
                     <div class="card-attacks-section" id="modalAttacksSection">
                         <h3>Ataques / Habilidades</h3>
                         <div class="attacks-list" id="modalCardAttacks">
-                            <!-- Populated dynamically -->
                         </div>
                     </div>
 
@@ -203,7 +210,6 @@
         </div>
     </div>
 
-    <!-- Scripts -->
     <script src="app.js"></script>
 </body>
 </html>

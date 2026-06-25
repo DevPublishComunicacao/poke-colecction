@@ -30,7 +30,7 @@ app.use((req, res, next) => {
   next();
 });
 
-require('./routes/collections')(app);
+require('./routes/catalogo')(app);
 require('./routes/auth')(app);
 require('./routes/user')(app);
 

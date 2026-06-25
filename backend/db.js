@@ -20,32 +20,24 @@ const pool = new Pool({
 
 async function createTables() {
   await pool.query(`
-    CREATE TABLE IF NOT EXISTS ${T('collections')} (
-      id TEXT PRIMARY KEY,
-      name TEXT NOT NULL,
-      year INTEGER NOT NULL,
-      country TEXT NOT NULL,
-      description TEXT NOT NULL
+    CREATE TABLE IF NOT EXISTS ${T('colecoes')} (
+      id SERIAL PRIMARY KEY,
+      name TEXT UNIQUE NOT NULL
     )
   `);
   await pool.query(`
-    CREATE TABLE IF NOT EXISTS ${T('cards')} (
-      id TEXT NOT NULL,
-      collection_id TEXT NOT NULL,
+    CREATE TABLE IF NOT EXISTS ${T('expansoes')} (
+      id SERIAL PRIMARY KEY,
       name TEXT NOT NULL,
-      number TEXT NOT NULL,
-      total TEXT NOT NULL,
-      image TEXT NOT NULL,
-      type TEXT NOT NULL,
-      hp TEXT NOT NULL,
-      rarity TEXT NOT NULL,
-      stage TEXT NOT NULL,
-      weakness TEXT NOT NULL,
-      resistance TEXT NOT NULL,
-      retreat TEXT NOT NULL,
-      attacks TEXT NOT NULL,
-      sort_order INTEGER NOT NULL DEFAULT 0,
-      PRIMARY KEY (collection_id, id)
+      colecao_id INTEGER NOT NULL REFERENCES ${T('colecoes')}(id),
+      year INTEGER NOT NULL DEFAULT 0,
+      description TEXT NOT NULL DEFAULT ''
+    )
+  `);
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS ${T('paises')} (
+      id SERIAL PRIMARY KEY,
+      name TEXT UNIQUE NOT NULL
     )
   `);
   await pool.query(`
@@ -57,25 +49,129 @@ async function createTables() {
       created_at TIMESTAMP DEFAULT NOW()
     )
   `);
-  await pool.query(`
-    CREATE TABLE IF NOT EXISTS ${T('user_stock')} (
-      user_id TEXT NOT NULL,
-      collection_id TEXT NOT NULL,
-      card_id TEXT NOT NULL,
-      finish_none INTEGER NOT NULL DEFAULT 0,
-      finish_holo INTEGER NOT NULL DEFAULT 0,
-      finish_reverse INTEGER NOT NULL DEFAULT 0,
-      PRIMARY KEY (user_id, collection_id, card_id)
-    )
-  `);
-  await pool.query(`
-    CREATE TABLE IF NOT EXISTS ${T('user_acquired')} (
-      user_id TEXT NOT NULL,
-      collection_id TEXT NOT NULL,
-      card_id TEXT NOT NULL,
-      PRIMARY KEY (user_id, collection_id, card_id)
-    )
-  `);
+
+  const hasOld = await pool.query(
+    `SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = $1)`,
+    [T('collections')]
+  ).then(r => r.rows[0].exists);
+
+  if (hasOld) {
+    console.log('Migrating from old schema...');
+    const oldStock = await pool.query(`SELECT * FROM ${T('user_stock')}`).then(r => r.rows);
+    const oldAcquired = await pool.query(`SELECT * FROM ${T('user_acquired')}`).then(r => r.rows);
+
+    await pool.query(`DROP TABLE IF EXISTS ${T('collections')} CASCADE`);
+    await pool.query(`DROP TABLE IF EXISTS ${T('cards')} CASCADE`);
+    await pool.query(`DROP TABLE IF EXISTS ${T('user_stock')} CASCADE`);
+    await pool.query(`DROP TABLE IF EXISTS ${T('user_acquired')} CASCADE`);
+    await pool.query(`DROP TABLE IF EXISTS ${T('user_preferences')} CASCADE`);
+
+    await pool.query(`
+      CREATE TABLE ${T('cards')} (
+        id TEXT NOT NULL,
+        expansao_id INTEGER NOT NULL REFERENCES ${T('expansoes')}(id),
+        pais_id INTEGER NOT NULL REFERENCES ${T('paises')}(id),
+        name TEXT NOT NULL,
+        number TEXT NOT NULL,
+        total TEXT NOT NULL,
+        image TEXT NOT NULL,
+        type TEXT NOT NULL,
+        hp TEXT NOT NULL,
+        rarity TEXT NOT NULL,
+        stage TEXT NOT NULL,
+        weakness TEXT NOT NULL,
+        resistance TEXT NOT NULL,
+        retreat TEXT NOT NULL,
+        attacks TEXT NOT NULL,
+        sort_order INTEGER NOT NULL DEFAULT 0,
+        PRIMARY KEY (expansao_id, pais_id, id)
+      )
+    `);
+    await pool.query(`
+      CREATE TABLE ${T('user_stock')} (
+        user_id TEXT NOT NULL,
+        expansao_id INTEGER NOT NULL,
+        pais_id INTEGER NOT NULL,
+        card_id TEXT NOT NULL,
+        finish_none INTEGER NOT NULL DEFAULT 0,
+        finish_holo INTEGER NOT NULL DEFAULT 0,
+        finish_reverse INTEGER NOT NULL DEFAULT 0,
+        PRIMARY KEY (user_id, expansao_id, pais_id, card_id)
+      )
+    `);
+    await pool.query(`
+      CREATE TABLE ${T('user_acquired')} (
+        user_id TEXT NOT NULL,
+        expansao_id INTEGER NOT NULL,
+        pais_id INTEGER NOT NULL,
+        card_id TEXT NOT NULL,
+        PRIMARY KEY (user_id, expansao_id, pais_id, card_id)
+      )
+    `);
+    await pool.query(`
+      CREATE TABLE ${T('user_preferences')} (
+        user_id TEXT PRIMARY KEY REFERENCES ${T('users')}(id),
+        colecao_id INTEGER NOT NULL REFERENCES ${T('colecoes')}(id),
+        expansao_id INTEGER NOT NULL REFERENCES ${T('expansoes')}(id),
+        pais_id INTEGER NOT NULL REFERENCES ${T('paises')}(id)
+      )
+    `);
+
+    global.__migrate_stock = oldStock;
+    global.__migrate_acquired = oldAcquired;
+    console.log('Migration: backed up ' + oldStock.length + ' stock, ' + oldAcquired.length + ' acquired');
+  } else {
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS ${T('cards')} (
+        id TEXT NOT NULL,
+        expansao_id INTEGER NOT NULL REFERENCES ${T('expansoes')}(id),
+        pais_id INTEGER NOT NULL REFERENCES ${T('paises')}(id),
+        name TEXT NOT NULL,
+        number TEXT NOT NULL,
+        total TEXT NOT NULL,
+        image TEXT NOT NULL,
+        type TEXT NOT NULL,
+        hp TEXT NOT NULL,
+        rarity TEXT NOT NULL,
+        stage TEXT NOT NULL,
+        weakness TEXT NOT NULL,
+        resistance TEXT NOT NULL,
+        retreat TEXT NOT NULL,
+        attacks TEXT NOT NULL,
+        sort_order INTEGER NOT NULL DEFAULT 0,
+        PRIMARY KEY (expansao_id, pais_id, id)
+      )
+    `);
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS ${T('user_stock')} (
+        user_id TEXT NOT NULL,
+        expansao_id INTEGER NOT NULL,
+        pais_id INTEGER NOT NULL,
+        card_id TEXT NOT NULL,
+        finish_none INTEGER NOT NULL DEFAULT 0,
+        finish_holo INTEGER NOT NULL DEFAULT 0,
+        finish_reverse INTEGER NOT NULL DEFAULT 0,
+        PRIMARY KEY (user_id, expansao_id, pais_id, card_id)
+      )
+    `);
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS ${T('user_acquired')} (
+        user_id TEXT NOT NULL,
+        expansao_id INTEGER NOT NULL,
+        pais_id INTEGER NOT NULL,
+        card_id TEXT NOT NULL,
+        PRIMARY KEY (user_id, expansao_id, pais_id, card_id)
+      )
+    `);
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS ${T('user_preferences')} (
+        user_id TEXT PRIMARY KEY REFERENCES ${T('users')}(id),
+        colecao_id INTEGER NOT NULL REFERENCES ${T('colecoes')}(id),
+        expansao_id INTEGER NOT NULL REFERENCES ${T('expansoes')}(id),
+        pais_id INTEGER NOT NULL REFERENCES ${T('paises')}(id)
+      )
+    `);
+  }
 }
 
 const db = {

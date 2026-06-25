@@ -87,22 +87,26 @@ async function fetchTcgdexCards(lang) {
   return results;
 }
 
-const SAMPLE_COLLECTIONS = [];
-
 async function seedDatabase(db) {
-  const col = await db.get(`SELECT COUNT(*) as cnt FROM ${T('collections')}`);
+  // Check if already seeded on new schema
+  const col = await db.get(`SELECT COUNT(*) as cnt FROM ${T('colecoes')}`);
   if (col.cnt > 0) {
+    // Already seeded — just ensure cache exists
     if (!loadCardCache()) {
-      const enCards = await db.all(`SELECT * FROM ${T('cards')} WHERE collection_id = $1 ORDER BY sort_order`, ['chaos-rising']);
-      const ptCards = await db.all(`SELECT * FROM ${T('cards')} WHERE collection_id = $1 ORDER BY sort_order`, ['chaos-rising-ptbr']);
+      const enCards = await db.all(`SELECT * FROM ${T('cards')} WHERE expansao_id = 1 AND pais_id = 1 ORDER BY sort_order`);
+      const ptCards = await db.all(`SELECT * FROM ${T('cards')} WHERE expansao_id = 1 AND pais_id = 2 ORDER BY sort_order`);
       if (enCards.length && ptCards.length) {
         const mapCard = c => ({ ...c, attacks: JSON.parse(c.attacks) });
         saveCardCache(enCards.map(mapCard), ptCards.map(mapCard));
-        console.log('Cache generated from existing database');
       }
     }
     return;
   }
+
+  const COLEAO_ID = 1;
+  const EXPANSAO_ID = 1;
+  const PAIS_EUA = 1;
+  const PAIS_BRASIL = 2;
 
   console.log('Fetching card data from TCGDex API...');
   const cached = loadCardCache();
@@ -119,40 +123,48 @@ async function seedDatabase(db) {
     saveCardCache(enCards, ptCards);
   }
 
-  const allCollections = [
-    ...SAMPLE_COLLECTIONS,
-    {
-      id: 'chaos-rising',
-      name: 'Megaevoluções - Caos Ascendente',
-      year: 2026,
-      country: 'Estados Unidos',
-      description: 'Caos Ascendente apresenta novas Megaevoluções com ilustrações impressionantes de Kalos.',
-      cards: enCards
-    },
-    {
-      id: 'chaos-rising-ptbr',
-      name: 'Mega Evolução - Caos Ascendente (pt-BR)',
-      year: 2026,
-      country: 'Brasil',
-      description: 'Versão em português brasileiro de Caos Ascendente.',
-      cards: ptCards
-    }
-  ];
-
   const txFn = db.transaction(async (tx) => {
-    for (const col of allCollections) {
-      await tx.run(`INSERT INTO ${T('collections')} (id, name, year, country, description) VALUES ($1, $2, $3, $4, $5)`, [col.id, col.name, col.year, col.country, col.description]);
-      for (let idx = 0; idx < col.cards.length; idx++) {
-        const card = col.cards[idx];
-        await tx.run(`INSERT INTO ${T('cards')} (id, collection_id, name, number, total, image, type, hp, rarity, stage, weakness, resistance, retreat, attacks, sort_order) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)`,
-          [card.id, col.id, card.name, card.number, card.total, card.image, card.type, card.hp, card.rarity, card.stage, card.weakness, card.resistance, card.retreat, JSON.stringify(card.attacks || []), idx]);
-      }
+    await tx.run(`INSERT INTO ${T('colecoes')} (id, name) VALUES ($1, $2)`, [COLEAO_ID, 'Megaevoluções']);
+    await tx.run(`INSERT INTO ${T('expansoes')} (id, name, colecao_id, year, description) VALUES ($1, $2, $3, $4, $5)`,
+      [EXPANSAO_ID, 'Caos Ascendente', COLEAO_ID, 2026, 'Caos Ascendente apresenta novas Megaevoluções com ilustrações impressionantes de Kalos.']);
+    await tx.run(`INSERT INTO ${T('paises')} (id, name) VALUES ($1, $2)`, [PAIS_EUA, 'Estados Unidos']);
+    await tx.run(`INSERT INTO ${T('paises')} (id, name) VALUES ($1, $2)`, [PAIS_BRASIL, 'Brasil']);
+
+    for (let idx = 0; idx < enCards.length; idx++) {
+      const c = enCards[idx];
+      await tx.run(`INSERT INTO ${T('cards')} (id, expansao_id, pais_id, name, number, total, image, type, hp, rarity, stage, weakness, resistance, retreat, attacks, sort_order) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)`,
+        [c.id, EXPANSAO_ID, PAIS_EUA, c.name, c.number, c.total, c.image, c.type, c.hp, c.rarity, c.stage, c.weakness, c.resistance, c.retreat, JSON.stringify(c.attacks || []), idx]);
+    }
+    for (let idx = 0; idx < ptCards.length; idx++) {
+      const c = ptCards[idx];
+      await tx.run(`INSERT INTO ${T('cards')} (id, expansao_id, pais_id, name, number, total, image, type, hp, rarity, stage, weakness, resistance, retreat, attacks, sort_order) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)`,
+        [c.id, EXPANSAO_ID, PAIS_BRASIL, c.name, c.number, c.total, c.image, c.type, c.hp, c.rarity, c.stage, c.weakness, c.resistance, c.retreat, JSON.stringify(c.attacks || []), idx]);
     }
   });
   await txFn();
 
-  const totalCards = allCollections.reduce((s, c) => s + c.cards.length, 0);
-  console.log('Database seeded: ' + allCollections.length + ' collections, ' + totalCards + ' cards');
+  const totalCards = enCards.length + ptCards.length;
+  console.log('Database seeded: 1 coleção, 1 expansão, 2 países, ' + totalCards + ' cards');
+
+  // Restore migrated user data from old schema
+  if (global.__migrate_stock && global.__migrate_stock.length > 0) {
+    console.log('Restoring ' + global.__migrate_stock.length + ' stock entries...');
+    for (const row of global.__migrate_stock) {
+      const paisId = row.collection_id === 'chaos-rising-ptbr' ? PAIS_BRASIL : PAIS_EUA;
+      await db.run(`INSERT INTO ${T('user_stock')} (user_id, expansao_id, pais_id, card_id, finish_none, finish_holo, finish_reverse) VALUES ($1,$2,$3,$4,$5,$6,$7)`,
+        [row.user_id, EXPANSAO_ID, paisId, row.card_id, row.finish_none, row.finish_holo, row.finish_reverse]);
+    }
+    global.__migrate_stock = null;
+  }
+  if (global.__migrate_acquired && global.__migrate_acquired.length > 0) {
+    console.log('Restoring ' + global.__migrate_acquired.length + ' acquired entries...');
+    for (const row of global.__migrate_acquired) {
+      const paisId = row.collection_id === 'chaos-rising-ptbr' ? PAIS_BRASIL : PAIS_EUA;
+      await db.run(`INSERT INTO ${T('user_acquired')} (user_id, expansao_id, pais_id, card_id) VALUES ($1,$2,$3,$4)`,
+        [row.user_id, EXPANSAO_ID, paisId, row.card_id]);
+    }
+    global.__migrate_acquired = null;
+  }
 }
 
 module.exports = { seedDatabase };
