@@ -210,7 +210,20 @@ const SAMPLE_COLLECTIONS = [
 
 async function seedDatabase(db) {
     const colCount = db.prepare('SELECT COUNT(*) as cnt FROM collections').get();
-    if (colCount.cnt > 0) return;
+    if (colCount.cnt > 0) {
+        // Generate cache from existing database data if cache is missing
+        if (!loadCardCache()) {
+            const cols = db.prepare('SELECT id, name, year, country, description FROM collections').all();
+            const enCards = db.prepare("SELECT * FROM cards WHERE collection_id = 'chaos-rising' ORDER BY sort_order").all();
+            const ptCards = db.prepare("SELECT * FROM cards WHERE collection_id = 'chaos-rising-ptbr' ORDER BY sort_order").all();
+            if (enCards.length && ptCards.length) {
+                const mapCard = c => ({ ...c, attacks: JSON.parse(c.attacks) });
+                saveCardCache(enCards.map(mapCard), ptCards.map(mapCard));
+                console.log('Cache generated from existing database');
+            }
+        }
+        return;
+    }
 
     const insertCol = db.prepare('INSERT INTO collections (id, name, year, country, description) VALUES (?, ?, ?, ?, ?)');
     const insertCard = db.prepare('INSERT INTO cards (id, collection_id, name, number, total, image, type, hp, rarity, stage, weakness, resistance, retreat, attacks, sort_order) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
