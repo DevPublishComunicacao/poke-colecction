@@ -171,6 +171,10 @@ body {
     transition: transform 0.2s ease;
 }
 
+.custom-dropdown.active {
+    z-index: 10000;
+}
+
 .custom-dropdown.active .dropdown-arrow {
     color: var(--primary-color);
     transform: rotate(180deg);
