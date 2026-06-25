@@ -1429,6 +1429,16 @@ body {
         max-width: 260px;
         margin: 0 auto;
     }
+    .modal-card-details {
+        text-align: center;
+    }
+    .modal-card-details .card-specs,
+    .modal-card-details .card-footer-specs {
+        justify-content: center;
+    }
+    .modal-card-details .attacks-list {
+        text-align: left;
+    }
 }
 
 /* Loading Overlay */
