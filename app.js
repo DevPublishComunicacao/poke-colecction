@@ -63,10 +63,10 @@ async function fetchAndCacheUserData(collectionId) {
     }
 }
 
-async function syncUserData(collectionId) {
-    if (!isLoggedIn()) return;
+async function syncUserData() {
+    if (!isLoggedIn() || !currentCollection) return;
     try {
-        await fetch('/api/user/all/' + collectionId, {
+        await fetch('/api/user/all/' + currentCollection.id, {
             method: 'PUT',
             headers: authHeaders(),
             body: JSON.stringify({ stock: _stockCache || {}, acquired: _acquiredCache || [] })
@@ -81,7 +81,6 @@ function getAcquiredCards() {
 
 function setAcquiredCards(ids) {
     _acquiredCache = [...new Set(ids)];
-    if (currentCollection) syncUserData(currentCollection.id);
 }
 
 function getCardStock() {
@@ -90,7 +89,6 @@ function getCardStock() {
 
 function setCardStock(stock) {
     _stockCache = stock;
-    if (currentCollection) syncUserData(currentCollection.id);
 }
 
 function toggleAcquire(cardId) {
@@ -111,6 +109,7 @@ function toggleAcquire(cardId) {
         }
     }
     setAcquiredCards(acquired);
+    syncUserData();
     renderCards();
 }
 
@@ -289,6 +288,7 @@ function adjustStock(cardId, finish, delta) {
         acquired.splice(idx, 1);
         setAcquiredCards(acquired);
     }
+    syncUserData();
     renderCards();
 }
 
@@ -304,6 +304,7 @@ function markAllAcquired() {
     }
     if (changed) {
         setAcquiredCards(acquired);
+        syncUserData();
         renderCards();
     }
 }
@@ -313,6 +314,7 @@ function markAllUnacquired() {
     if (acquired.length > 0) {
         setAcquiredCards([]);
         setCardStock({});
+        syncUserData();
         renderCards();
     }
 }
@@ -437,6 +439,7 @@ function renderCards() {
         statTotal.textContent = acquiredCount > 0 ? `${totalCards} (${acquiredCount} adquiridas)` : String(totalCards);
     }
 
+    const loggedIn = isLoggedIn();
     // Bulk action bar — create once, update labels only
     if (!document.querySelector(".bulk-bar")) {
         const gridHeader = document.querySelector(".grid-header");
@@ -449,13 +452,15 @@ function renderCards() {
                         <input type="text" id="cardSearch" placeholder="Buscar..." aria-label="Buscar carta" autocomplete="off">
                         <div class="search-autocomplete" id="searchAutocomplete"></div>
                     </div>
-                    <button class="bulk-btn" id="markAllBtn">${acquiredCount === currentCollection.cards.length ? '' : 'Marcar'} todas</button>
-                    <button class="bulk-btn" id="unmarkAllBtn">${acquiredCount > 0 ? 'Desmarcar' : ''} todas</button>
+                    ${loggedIn ? `<button class="bulk-btn" id="markAllBtn">${acquiredCount === currentCollection.cards.length ? '' : 'Marcar'} todas</button>
+                    <button class="bulk-btn" id="unmarkAllBtn">${acquiredCount > 0 ? 'Desmarcar' : ''} todas</button>` : ''}
                 </div>
             `);
             attachSearchListeners();
-            document.getElementById("markAllBtn").addEventListener("click", markAllAcquired);
-            document.getElementById("unmarkAllBtn").addEventListener("click", markAllUnacquired);
+            if (loggedIn) {
+                document.getElementById("markAllBtn").addEventListener("click", markAllAcquired);
+                document.getElementById("unmarkAllBtn").addEventListener("click", markAllUnacquired);
+            }
         }
     } else {
         const countEl = document.getElementById("bulkCount");
@@ -488,9 +493,9 @@ function renderCards() {
         <article class="${classes.join(' ')}" data-card-id="${card.id}" tabindex="0">
             <div class="card-img-wrapper">
                 <img src="${card.image}" alt="Carta de ${card.name}" loading="lazy">
-                <button class="acquire-btn" data-acquire-id="${card.id}" aria-label="${acquired ? 'Remover' : 'Marcar'} como adquirida" title="${acquired ? 'Remover' : 'Marcar'} adquirida">
+                ${loggedIn ? `<button class="acquire-btn" data-acquire-id="${card.id}" aria-label="${acquired ? 'Remover' : 'Marcar'} como adquirida" title="${acquired ? 'Remover' : 'Marcar'} adquirida">
                     <i class="fa-solid fa-check"></i>
-                </button>
+                </button>` : ''}
                 <span class="foil-badge foil-${dominant}">${FINISH_LABELS[dominant]}</span>
             </div>
             <div class="card-info">
@@ -502,7 +507,7 @@ function renderCards() {
                     ${card.type !== "Treinadora" ? `<span class="char-badge type-${card.type.toLowerCase()}">${card.type}</span>` : ''}
                     <span class="char-badge rarity">${card.rarity}</span>
                 </div>
-                <div class="card-qty">
+                ${loggedIn ? `<div class="card-qty">
                     ${['none','holo','reverse'].map(f => `
                         <div class="qty-group">
                             <span class="qty-label">${FINISH_LABELS[f]}</span>
@@ -513,7 +518,7 @@ function renderCards() {
                             </div>
                         </div>
                     `).join('')}
-                </div>
+                </div>` : ''}
             </div>
         </article>`;
     }).join("");
@@ -596,22 +601,28 @@ function openCardDetails(cardId) {
     modalCardFooterSpecs.style.display = isTrainer ? 'none' : '';
     modalAttacksSection.querySelector('h3').textContent = isTrainer ? 'Efeito' : 'Ataques / Habilidades';
 
+    const loggedIn = isLoggedIn();
     // Stock info — inline editor
-    const stock = getCardStock();
-    const s = stock[card.id] || { none: 0, holo: 0, reverse: 0 };
-    modalStockItems.innerHTML = ['none','holo','reverse'].map(f => `
-        <div class="modal-qty-group">
-            <span class="modal-qty-label ${f === 'holo' ? 'modal-qty-holo' : f === 'reverse' ? 'modal-qty-reverse' : ''}">${FINISH_LABELS[f]}</span>
-            <div class="modal-qty-row">
-                <button class="modal-qty-btn" data-mstock="${card.id}:${f}:-1">−</button>
-                <span class="modal-qty-value">${s[f]}</span>
-                <button class="modal-qty-btn" data-mstock="${card.id}:${f}:1">+</button>
+    if (loggedIn) {
+        const stock = getCardStock();
+        const s = stock[card.id] || { none: 0, holo: 0, reverse: 0 };
+        modalStockItems.innerHTML = ['none','holo','reverse'].map(f => `
+            <div class="modal-qty-group">
+                <span class="modal-qty-label ${f === 'holo' ? 'modal-qty-holo' : f === 'reverse' ? 'modal-qty-reverse' : ''}">${FINISH_LABELS[f]}</span>
+                <div class="modal-qty-row">
+                    <button class="modal-qty-btn" data-mstock="${card.id}:${f}:-1">−</button>
+                    <span class="modal-qty-value">${s[f]}</span>
+                    <button class="modal-qty-btn" data-mstock="${card.id}:${f}:1">+</button>
+                </div>
             </div>
-        </div>
-    `).join('');
-    modalCardStock.style.display = (s.none || s.holo || s.reverse) ? '' : 'none';
+        `).join('');
+        modalCardStock.style.display = (s.none || s.holo || s.reverse) ? '' : 'none';
+    } else {
+        modalCardStock.style.display = 'none';
+    }
 
     // Acquire button state in modal
+    modalAcquireBtn.style.display = loggedIn ? '' : 'none';
     const isAcquired = getAcquiredCards().includes(card.id);
     modalAcquireBtn.classList.toggle("acquired", isAcquired);
     modalAcquireBtn.setAttribute("aria-label", isAcquired ? 'Remover' : 'Marcar como adquirida');
@@ -686,6 +697,7 @@ cardModal.addEventListener("mousedown", (e) => {
         modalCardStock.style.display = '';
     }
     setAcquiredCards(acquired);
+    syncUserData();
     const nowAcquired = !wasAcquired;
     btn.classList.toggle("acquired", nowAcquired);
     btn.setAttribute("aria-label", nowAcquired ? 'Remover' : 'Marcar como adquirida');
