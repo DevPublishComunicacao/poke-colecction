@@ -22,6 +22,7 @@ function clearAuth() {
     _authToken = null;
     _authUser = null;
     localStorage.removeItem('auth_token');
+    localStorage.removeItem('remembered_password');
 }
 
 function authHeaders() {
@@ -259,11 +260,13 @@ function initAuth() {
             setToken(data.token, data.user);
             updateUserUI();
             closeAuthModal();
-            // Save or clear remembered email
+            // Save or clear remembered credentials
             if (document.getElementById('rememberMe').checked) {
                 localStorage.setItem('remembered_email', username);
+                localStorage.setItem('remembered_password', password);
             } else {
                 localStorage.removeItem('remembered_email');
+                localStorage.removeItem('remembered_password');
             }
             document.getElementById('authUsername').value = '';
             document.getElementById('authPassword').value = '';
@@ -284,8 +287,10 @@ function openAuthModal() {
     document.getElementById('authModal').setAttribute('aria-hidden', 'false');
     document.getElementById('authError').textContent = '';
     const savedEmail = localStorage.getItem('remembered_email');
+    const savedPass = localStorage.getItem('remembered_password');
     if (savedEmail) {
         document.getElementById('authUsername').value = savedEmail;
+        if (savedPass) document.getElementById('authPassword').value = savedPass;
         document.getElementById('rememberMe').checked = true;
         document.getElementById('authPassword').focus();
     } else {
