@@ -1559,9 +1559,9 @@ body {
     line-height: 1;
 }
 .password-toggle:hover {
-    color: var(--text-primary);
-    background: rgba(255,255,255,0.12);
-    border-color: rgba(255,255,255,0.2);
+    color: var(--primary-color);
+    background: rgba(93,91,246,0.15);
+    border-color: var(--primary-color);
 }
 
 .remember-field {
