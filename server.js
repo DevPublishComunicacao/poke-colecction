@@ -60,6 +60,7 @@ function initDatabase() {
         CREATE TABLE IF NOT EXISTS users (
             id TEXT PRIMARY KEY,
             username TEXT NOT NULL UNIQUE,
+            name TEXT NOT NULL DEFAULT '',
             password TEXT NOT NULL,
             created_at TEXT NOT NULL DEFAULT (datetime('now'))
         );
@@ -81,6 +82,9 @@ function initDatabase() {
             PRIMARY KEY (user_id, collection_id, card_id)
         );
     `);
+
+    // Migration: add name column to users if missing
+    try { db.exec("ALTER TABLE users ADD COLUMN name TEXT NOT NULL DEFAULT ''"); } catch (_) {}
 
     return db;
 }
@@ -307,17 +311,19 @@ app.get('/api/collections/:id', (req, res) => {
 
 // --- Auth routes ---
 app.post('/api/auth/register', (req, res) => {
-    const { username, password } = req.body;
+    const { username, password, name } = req.body;
     if (!username || !password) return res.status(400).json({ error: 'Username and password required' });
     if (username.length < 3) return res.status(400).json({ error: 'Username must have at least 3 characters' });
     if (password.length < 4) return res.status(400).json({ error: 'Password must have at least 4 characters' });
+    const displayName = (name || '').trim();
+    if (displayName && displayName.length < 3) return res.status(400).json({ error: 'Name must have at least 3 characters' });
     const existing = db.prepare('SELECT id FROM users WHERE username = ?').get(username);
     if (existing) return res.status(409).json({ error: 'Username already taken' });
     const id = generateUserId();
     const hash = bcrypt.hashSync(password, 10);
-    db.prepare('INSERT INTO users (id, username, password) VALUES (?, ?, ?)').run(id, username, hash);
-    const token = jwt.sign({ userId: id, username }, JWT_SECRET, { expiresIn: '30d' });
-    res.status(201).json({ token, user: { id, username } });
+    db.prepare('INSERT INTO users (id, username, name, password) VALUES (?, ?, ?, ?)').run(id, username, displayName, hash);
+    const token = jwt.sign({ userId: id, username, name: displayName }, JWT_SECRET, { expiresIn: '30d' });
+    res.status(201).json({ token, user: { id, username, name: displayName } });
 });
 
 app.post('/api/auth/login', (req, res) => {
@@ -325,8 +331,8 @@ app.post('/api/auth/login', (req, res) => {
     if (!username || !password) return res.status(400).json({ error: 'Username and password required' });
     const user = db.prepare('SELECT * FROM users WHERE username = ?').get(username);
     if (!user || !bcrypt.compareSync(password, user.password)) return res.status(401).json({ error: 'Invalid username or password' });
-    const token = jwt.sign({ userId: user.id, username: user.username }, JWT_SECRET, { expiresIn: '30d' });
-    res.json({ token, user: { id: user.id, username: user.username } });
+    const token = jwt.sign({ userId: user.id, username: user.username, name: user.name }, JWT_SECRET, { expiresIn: '30d' });
+    res.json({ token, user: { id: user.id, username: user.username, name: user.name } });
 });
 
 // --- User data routes (require auth) ---

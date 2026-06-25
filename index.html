@@ -91,14 +91,29 @@
             </button>
             <div class="auth-body">
                 <h2 id="authTitle">Entrar</h2>
-                <form id="authForm" class="auth-form">
-                    <div class="auth-field">
-                        <label for="authUsername">Usuário</label>
-                        <input type="text" id="authUsername" autocomplete="username" minlength="3" required>
+                <form id="authForm" class="auth-form" autocomplete="on">
+                    <div class="auth-field" id="authNameField" style="display:none">
+                        <label for="authName">Nome</label>
+                        <input type="text" id="authName" autocomplete="name" minlength="3">
                     </div>
                     <div class="auth-field">
+                        <label for="authUsername">E-mail</label>
+                        <input type="email" id="authUsername" autocomplete="email" required>
+                    </div>
+                    <div class="auth-field password-field">
                         <label for="authPassword">Senha</label>
-                        <input type="password" id="authPassword" autocomplete="current-password" minlength="4" required>
+                        <div class="password-wrapper">
+                            <input type="password" id="authPassword" autocomplete="current-password" required minlength="4">
+                            <button type="button" class="password-toggle" id="passwordToggle" tabindex="-1" aria-label="Mostrar senha">
+                                <i class="fa-regular fa-eye"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="auth-field remember-field">
+                        <label class="remember-label">
+                            <input type="checkbox" id="rememberMe" checked>
+                            <span>Lembrar senha</span>
+                        </label>
                     </div>
                     <div class="auth-error" id="authError"></div>
                     <button type="submit" class="auth-submit" id="authSubmit">Entrar</button>

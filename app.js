@@ -34,7 +34,7 @@ function isLoggedIn() { return !!getToken(); }
 function updateUserUI() {
     const span = document.getElementById('userName');
     if (!span) return;
-    span.textContent = _authUser ? _authUser.username : 'Entrar';
+    span.textContent = _authUser ? (_authUser.name || _authUser.username) : 'Entrar';
 }
 
 // In-memory cache for stock & acquired (synced with server)
@@ -195,7 +195,7 @@ function initAuth() {
     });
 
     document.getElementById('authModalClose').addEventListener('click', closeAuthModal);
-    document.getElementById('authModal').addEventListener('click', (e) => {
+    document.getElementById('authModal').addEventListener('mousedown', (e) => {
         if (e.target === e.currentTarget) closeAuthModal();
     });
 
@@ -205,7 +205,19 @@ function initAuth() {
         document.getElementById('authSubmit').textContent = _authMode === 'login' ? 'Entrar' : 'Registrar';
         document.getElementById('authToggleText').textContent = _authMode === 'login' ? 'Não tem conta?' : 'Já tem conta?';
         document.getElementById('authToggleBtn').textContent = _authMode === 'login' ? 'Registrar' : 'Entrar';
+        document.getElementById('authNameField').style.display = _authMode === 'register' ? '' : 'none';
         document.getElementById('authError').textContent = '';
+        document.getElementById('authUsername').focus();
+    });
+
+    // Password visibility toggle
+    document.getElementById('passwordToggle').addEventListener('click', () => {
+        const input = document.getElementById('authPassword');
+        const icon = document.querySelector('#passwordToggle i');
+        const isPassword = input.type === 'password';
+        input.type = isPassword ? 'text' : 'password';
+        icon.className = isPassword ? 'fa-regular fa-eye-slash' : 'fa-regular fa-eye';
+        document.getElementById('passwordToggle').setAttribute('aria-label', isPassword ? 'Ocultar senha' : 'Mostrar senha');
     });
 
     document.getElementById('authForm').addEventListener('submit', async (e) => {
@@ -214,12 +226,30 @@ function initAuth() {
         const password = document.getElementById('authPassword').value;
         const errorEl = document.getElementById('authError');
         errorEl.textContent = '';
+
+        // Email validation
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(username)) {
+            errorEl.textContent = 'Informe um e-mail válido';
+            return;
+        }
+
+        // Registration validation
+        let displayName = '';
+        if (_authMode === 'register') {
+            displayName = document.getElementById('authName').value.trim();
+            if (displayName.length < 3) {
+                errorEl.textContent = 'Nome deve ter pelo menos 3 caracteres';
+                return;
+            }
+        }
+
         const endpoint = _authMode === 'login' ? '/api/auth/login' : '/api/auth/register';
         try {
             const resp = await fetch(endpoint, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ username, password })
+                body: JSON.stringify({ username, password, name: displayName })
             });
             const data = await resp.json();
             if (!resp.ok) {
@@ -229,8 +259,15 @@ function initAuth() {
             setToken(data.token, data.user);
             updateUserUI();
             closeAuthModal();
+            // Save or clear remembered email
+            if (document.getElementById('rememberMe').checked) {
+                localStorage.setItem('remembered_email', username);
+            } else {
+                localStorage.removeItem('remembered_email');
+            }
             document.getElementById('authUsername').value = '';
             document.getElementById('authPassword').value = '';
+            document.getElementById('authName').value = '';
             // Reload user data for current collection
             if (currentCollection) {
                 await fetchAndCacheUserData(currentCollection.id);
@@ -246,6 +283,14 @@ function openAuthModal() {
     document.getElementById('authModal').classList.add('active');
     document.getElementById('authModal').setAttribute('aria-hidden', 'false');
     document.getElementById('authError').textContent = '';
+    const savedEmail = localStorage.getItem('remembered_email');
+    if (savedEmail) {
+        document.getElementById('authUsername').value = savedEmail;
+        document.getElementById('rememberMe').checked = true;
+        document.getElementById('authPassword').focus();
+    } else {
+        document.getElementById('authUsername').focus();
+    }
 }
 
 function closeAuthModal() {
