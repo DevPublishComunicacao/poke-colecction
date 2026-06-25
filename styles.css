@@ -1439,6 +1439,12 @@ body {
     .modal-card-details .attacks-list {
         text-align: left;
     }
+    .card-stock {
+        align-items: center;
+    }
+    .stock-items {
+        justify-content: center;
+    }
 }
 
 /* Loading Overlay */
