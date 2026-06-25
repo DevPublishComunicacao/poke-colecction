@@ -246,17 +246,13 @@ async function onColecaoSelect(colecao) {
   expansoes = [];
   paises = [];
   currentCards = [];
-  document.getElementById('expansaoSelectedValue').textContent = '—';
+  document.getElementById('expansaoSelectedValue').textContent = 'Selecione...';
   document.getElementById('expansaoSelectedValue').dataset.val = '';
-  document.getElementById('paisSelectedValue').textContent = '—';
+  document.getElementById('paisSelectedValue').textContent = 'Selecione...';
   document.getElementById('paisSelectedValue').dataset.val = '';
   document.getElementById('colecaoSelectedValue').dataset.val = colecao.id;
 
   await loadExpansoes();
-  if (expansoes.length > 0) {
-    await onExpansaoSelect(expansoes[0]);
-  }
-  await fetchAndCacheUserData();
   updateHeaderInfo();
   renderCards();
   await saveAllPrefs();
@@ -269,19 +265,13 @@ async function onExpansaoSelect(expansao) {
   currentCards = [];
   document.getElementById('expansaoSelectedValue').textContent = expansao.name;
   document.getElementById('expansaoSelectedValue').dataset.val = expansao.id;
-  document.getElementById('paisSelectedValue').textContent = '—';
+  document.getElementById('paisSelectedValue').textContent = 'Selecione...';
   document.getElementById('paisSelectedValue').dataset.val = '';
 
   await loadPaises();
-  if (paises.length > 0) {
-    await onPaisSelect(paises[0]);
-  } else {
-    currentCards = [];
-    await fetchAndCacheUserData();
-    updateHeaderInfo();
-    renderCards();
-    await saveAllPrefs();
-  }
+  updateHeaderInfo();
+  renderCards();
+  await saveAllPrefs();
 }
 
 async function onPaisSelect(pais) {
@@ -370,61 +360,65 @@ async function initApp() {
     return;
   }
 
-  // Populate colecao dropdown
   initColecaoDropdown();
+
+  const colVal = document.getElementById('colecaoSelectedValue');
+  const expVal = document.getElementById('expansaoSelectedValue');
+  const paisVal = document.getElementById('paisSelectedValue');
 
   // Restore preferences
   const prefResult = await restorePrefs();
-  if (!selectedColecao) selectedColecao = colecoes[0];
 
-  // Set colecao dropdown display
-  const colVal = document.getElementById('colecaoSelectedValue');
-  colVal.textContent = selectedColecao.name;
-  colVal.dataset.val = selectedColecao.id;
-  highlightDropdownItem('colecaoMenu', selectedColecao.id);
+  if (selectedColecao) {
+    // Prefs found — auto-select everything
+    colVal.textContent = selectedColecao.name;
+    colVal.dataset.val = selectedColecao.id;
+    highlightDropdownItem('colecaoMenu', selectedColecao.id);
+    await loadExpansoes();
 
-  // Load expansoes
-  await loadExpansoes();
+    let savedExpId = null;
+    if (prefResult.serverPrefs) savedExpId = prefResult.serverPrefs.expansao_id;
+    else if (prefResult.localPrefs) savedExpId = prefResult.localPrefs.expansao_id;
 
-  // Resolve expansao from prefs
-  let savedExpId = null;
-  if (prefResult.serverPrefs) savedExpId = prefResult.serverPrefs.expansao_id;
-  else if (prefResult.localPrefs) savedExpId = prefResult.localPrefs.expansao_id;
+    if (savedExpId) {
+      const found = expansoes.find(e => e.id == savedExpId);
+      if (found) selectedExpansao = found;
+    }
 
-  if (savedExpId) {
-    const found = expansoes.find(e => e.id == savedExpId);
-    if (found) selectedExpansao = found;
+    if (selectedExpansao) {
+      expVal.textContent = selectedExpansao.name;
+      expVal.dataset.val = selectedExpansao.id;
+      highlightDropdownItem('expansaoMenu', selectedExpansao.id);
+      await loadPaises();
+
+      let savedPaisId = null;
+      if (prefResult.serverPrefs) savedPaisId = prefResult.serverPrefs.pais_id;
+      else if (prefResult.localPrefs) savedPaisId = prefResult.localPrefs.pais_id;
+
+      if (savedPaisId) {
+        const found = paises.find(p => p.id == savedPaisId);
+        if (found) selectedPais = found;
+      }
+
+      if (selectedPais) {
+        paisVal.textContent = selectedPais.name;
+        paisVal.dataset.val = selectedPais.id;
+        highlightDropdownItem('paisMenu', selectedPais.id);
+      }
+    }
+
+    await loadCards();
+    updateHeaderInfo();
+  } else {
+    // No prefs — show placeholders
+    colVal.textContent = 'Selecione...';
+    colVal.dataset.val = '';
+    expVal.textContent = 'Selecione...';
+    expVal.dataset.val = '';
+    paisVal.textContent = 'Selecione...';
+    paisVal.dataset.val = '';
+    updateHeaderInfo();
   }
-  if (!selectedExpansao && expansoes.length > 0) selectedExpansao = expansoes[0];
-
-  if (selectedExpansao) {
-    document.getElementById('expansaoSelectedValue').textContent = selectedExpansao.name;
-    document.getElementById('expansaoSelectedValue').dataset.val = selectedExpansao.id;
-    highlightDropdownItem('expansaoMenu', selectedExpansao.id);
-  }
-
-  // Load paises
-  await loadPaises();
-
-  // Resolve pais from prefs
-  let savedPaisId = null;
-  if (prefResult.serverPrefs) savedPaisId = prefResult.serverPrefs.pais_id;
-  else if (prefResult.localPrefs) savedPaisId = prefResult.localPrefs.pais_id;
-
-  if (savedPaisId) {
-    const found = paises.find(p => p.id == savedPaisId);
-    if (found) selectedPais = found;
-  }
-  if (!selectedPais && paises.length > 0) selectedPais = paises[0];
-
-  if (selectedPais) {
-    document.getElementById('paisSelectedValue').textContent = selectedPais.name;
-    document.getElementById('paisSelectedValue').dataset.val = selectedPais.id;
-    highlightDropdownItem('paisMenu', selectedPais.id);
-  }
-
-  await loadCards();
-  updateHeaderInfo();
 
   const loader = document.getElementById('loadingOverlay');
   if (loader) loader.style.display = 'none';
