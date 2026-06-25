@@ -1402,6 +1402,9 @@ body {
 
 /* Responsive Rules */
 @media (max-width: 1024px) {
+    .modal-overlay {
+        padding: 10px;
+    }
     .app-container {
         grid-template-columns: 1fr;
     }
@@ -1422,33 +1425,47 @@ body {
     .modal-body {
         grid-template-columns: 1fr;
         gap: 30px;
-        padding: 30px;
+        padding: 20px;
     }
     
     .modal-card-visual {
-        max-width: 260px;
+        max-width: 220px;
         margin: 0 auto;
     }
     .modal-card-details {
         width: 100%;
+        max-width: 100%;
         text-align: center;
+        overflow-x: hidden;
     }
     .modal-card-details .card-specs,
     .modal-card-details .card-footer-specs {
+        display: flex;
         justify-content: center;
+        flex-wrap: wrap;
+        gap: 12px;
     }
     .modal-card-details .card-specs .spec-item,
     .modal-card-details .card-footer-specs .footer-spec {
         text-align: center;
+        min-width: 0;
     }
     .modal-card-details .attacks-list {
         text-align: left;
+        word-break: break-word;
     }
     .card-stock {
         align-items: center;
     }
     .stock-items {
         justify-content: center;
+        flex-wrap: wrap;
+    }
+    .modal-card-details .card-pull-section {
+        width: 100%;
+    }
+    .modal-content {
+        padding: 0;
     }
 }
 
