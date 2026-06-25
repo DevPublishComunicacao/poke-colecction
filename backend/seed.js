@@ -87,19 +87,7 @@ async function fetchTcgdexCards(lang) {
   return results;
 }
 
-const SAMPLE_COLLECTIONS = [
-  {
-    id: 'neo-genesis',
-    name: 'Neo Genesis (Edição Japonesa)',
-    year: 2000,
-    country: 'Japão',
-    description: 'A lendária coleção que apresentou os Pokémon de Johto ao TCG.',
-    cards: [
-      { id: 'lugia-neo', name: 'Lugia', number: '9', total: '111', image: 'assets/lugia.png', type: 'Incolor', hp: '90', rarity: 'Raro Holo', stage: 'Básico', attacks: [{ name: 'Vento Psíquico', damage: '40', desc: 'O Pokémon Ativo do oponente agora está Confuso.' }], weakness: 'Elétrico ×2', resistance: 'Lutador -30', retreat: '★★' },
-      { id: 'gengar-neo', name: 'Gengar', number: '10', total: '111', image: 'assets/gengar.png', type: 'Psíquico', hp: '80', rarity: 'Raro Holo', stage: 'Estágio 2', attacks: [{ name: 'Mão Fantasma', damage: '50', desc: 'Pokémon Defensor agora está Adormecido.' }], weakness: 'Sombrio ×2', resistance: 'Lutador -30', retreat: '★' }
-    ]
-  }
-];
+const SAMPLE_COLLECTIONS = [];
 
 async function seedDatabase(db) {
   const col = await db.get(`SELECT COUNT(*) as cnt FROM ${T('collections')}`);
