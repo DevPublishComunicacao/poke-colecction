@@ -89,17 +89,6 @@ async function fetchTcgdexCards(lang) {
 
 const SAMPLE_COLLECTIONS = [
   {
-    id: 'base-set',
-    name: 'Base Set (1ª Edição)',
-    year: 1999,
-    country: 'Estados Unidos',
-    description: 'A lendária coleção original que iniciou a febre de Pokémon TCG no ocidente.',
-    cards: [
-      { id: 'charizard-base', name: 'Charizard', number: '4', total: '102', image: 'assets/charizard.png', type: 'Fogo', hp: '120', rarity: 'Raro Holo', stage: 'Estágio 2', attacks: [{ name: 'Chama Giratória', damage: '100', desc: 'Descarte 2 Energias ligadas a Charizard.' }], weakness: 'Água ×2', resistance: 'Nenhuma', retreat: '★★' },
-      { id: 'pikachu-base', name: 'Pikachu', number: '58', total: '102', image: 'assets/pikachu.png', type: 'Relâmpago', hp: '60', rarity: 'Comum', stage: 'Básico', attacks: [{ name: 'Faísca', damage: '30', desc: 'Jogue uma moeda.' }], weakness: 'Lutador ×2', resistance: 'Nenhuma', retreat: '★' }
-    ]
-  },
-  {
     id: 'neo-genesis',
     name: 'Neo Genesis (Edição Japonesa)',
     year: 2000,
