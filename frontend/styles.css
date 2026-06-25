@@ -114,7 +114,8 @@ body {
 /* Cascade Selectors (Coleção, Expansão, País) */
 .cascade-selectors {
     display: flex;
-    gap: 12px;
+    flex-direction: column;
+    gap: 16px;
 }
 
 .selector-group {
