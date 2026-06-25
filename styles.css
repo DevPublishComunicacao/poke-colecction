@@ -1423,6 +1423,7 @@ body {
         grid-template-columns: 1fr;
         gap: 30px;
         padding: 30px;
+        justify-items: center;
     }
     
     .modal-card-visual {
@@ -1430,20 +1431,21 @@ body {
         margin: 0 auto;
     }
     .modal-card-details {
-        text-align: center;
-    }
-    .modal-card-details .card-specs,
-    .modal-card-details .card-footer-specs {
-        justify-content: center;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
     }
     .modal-card-details .attacks-list {
+        align-self: stretch;
         text-align: left;
     }
     .card-stock {
         align-items: center;
+        width: 100%;
     }
     .stock-items {
         justify-content: center;
+        width: 100%;
     }
 }
 
