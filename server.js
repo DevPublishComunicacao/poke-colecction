@@ -149,7 +149,7 @@ async function fetchSingleCard(lang, lid) {
         id: 'me4-' + lid,
         name: c.name || '',
         number: lid,
-        total: '122',
+        total: lang === 'pt' ? '86' : '122',
         image: 'assets/me4' + (lang === 'pt' ? '-pt' : '') + '-' + lid + '.webp',
         type: c.types && c.types.length > 0 ? c.types[0] : '—',
         hp: c.hp != null ? String(c.hp) : '-',
