@@ -4,7 +4,7 @@ const fs = require('fs');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 
-const { initDatabase, isPostgres } = require('./db');
+const { initDatabase } = require('./db');
 const { seedDatabase } = require('./seed');
 
 const app = express();
@@ -49,7 +49,7 @@ async function main() {
   app.locals.db = database;
   await seedDatabase(database);
   app.listen(PORT, '0.0.0.0', () => {
-    console.log('PokéCollection server running on http://localhost:' + PORT + (isPostgres ? ' (PostgreSQL)' : ' (SQLite)'));
+    console.log('PokéCollection server running on http://localhost:' + PORT + ' (PostgreSQL)');
   });
 }
 
