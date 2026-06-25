@@ -66,11 +66,16 @@ async function fetchAndCacheUserData(collectionId) {
 async function syncUserData() {
     if (!isLoggedIn() || !currentCollection) return;
     try {
-        await fetch('/api/user/all/' + currentCollection.id, {
+        const resp = await fetch('/api/user/all/' + currentCollection.id, {
             method: 'PUT',
             headers: authHeaders(),
             body: JSON.stringify({ stock: _stockCache || {}, acquired: _acquiredCache || [] })
         });
+        if (resp.status === 401) {
+            clearAuth();
+            updateUserUI();
+            if (currentCollection) renderCards();
+        }
     } catch (e) {}
 }
 

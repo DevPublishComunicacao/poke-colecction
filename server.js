@@ -11,7 +11,15 @@ const CACHE_FILE = path.join(__dirname, 'seed-cache.json');
 const app = express();
 const PORT = process.env.PORT || 3000;
 const DB_PATH = process.env.DB_PATH || path.join(__dirname, 'pokecollection.db');
-const JWT_SECRET = process.env.JWT_SECRET || crypto.randomBytes(32).toString('hex');
+const JWT_SECRET = process.env.JWT_SECRET || (() => {
+    const keyFile = path.join(__dirname, '.jwt_secret');
+    try {
+        if (fs.existsSync(keyFile)) return fs.readFileSync(keyFile, 'utf8').trim();
+        const key = crypto.randomBytes(32).toString('hex');
+        fs.writeFileSync(keyFile, key);
+        return key;
+    } catch (_) { return crypto.randomBytes(32).toString('hex'); }
+})();
 
 app.use(express.json());
 app.use(express.static(path.join(__dirname)));
