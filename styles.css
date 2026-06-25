@@ -1423,7 +1423,6 @@ body {
         grid-template-columns: 1fr;
         gap: 30px;
         padding: 30px;
-        justify-items: center;
     }
     
     .modal-card-visual {
@@ -1431,21 +1430,25 @@ body {
         margin: 0 auto;
     }
     .modal-card-details {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
+        width: 100%;
+        text-align: center;
+    }
+    .modal-card-details .card-specs,
+    .modal-card-details .card-footer-specs {
+        justify-content: center;
+    }
+    .modal-card-details .card-specs .spec-item,
+    .modal-card-details .card-footer-specs .footer-spec {
+        text-align: center;
     }
     .modal-card-details .attacks-list {
-        align-self: stretch;
         text-align: left;
     }
     .card-stock {
         align-items: center;
-        width: 100%;
     }
     .stock-items {
         justify-content: center;
-        width: 100%;
     }
 }
 
