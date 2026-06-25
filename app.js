@@ -298,32 +298,6 @@ function adjustStock(cardId, finish, delta) {
     renderCards();
 }
 
-function markAllAcquired() {
-    const acquired = getAcquiredCards();
-    const allIds = currentCollection.cards.map(c => c.id);
-    let changed = false;
-    for (const id of allIds) {
-        if (!acquired.includes(id)) {
-            acquired.push(id);
-            changed = true;
-        }
-    }
-    if (changed) {
-        setAcquiredCards(acquired);
-        syncUserData();
-        renderCards();
-    }
-}
-
-function markAllUnacquired() {
-    const acquired = getAcquiredCards();
-    if (acquired.length > 0) {
-        setAcquiredCards([]);
-        setCardStock({});
-        syncUserData();
-        renderCards();
-    }
-}
 
 // DOM Elements
 const collectionDropdown = document.getElementById("collectionDropdown");
@@ -462,23 +436,25 @@ function renderCards() {
                         <div class="search-autocomplete" id="searchAutocomplete"></div>
                     </div>
                     <div class="filter-status-group">
+                        <button class="filter-status-btn${!filterStatus ? ' active' : ''}" data-filter="all">Todas</button>
                         <button class="filter-status-btn${filterStatus === 'acquired' ? ' active' : ''}" data-filter="acquired">Adquiridas</button>
                         <button class="filter-status-btn${filterStatus === 'missing' ? ' active' : ''}" data-filter="missing">Faltantes</button>
                     </div>
-                    ${loggedIn ? `<button class="bulk-btn" id="markAllBtn">${acquiredCount === currentCollection.cards.length ? '' : 'Marcar'} todas</button>
-                    <button class="bulk-btn" id="unmarkAllBtn">${acquiredCount > 0 ? 'Desmarcar' : ''} todas</button>` : ''}
                 </div>
             `);
             attachSearchListeners();
-            if (loggedIn) {
-                document.getElementById("markAllBtn").addEventListener("click", markAllAcquired);
-                document.getElementById("unmarkAllBtn").addEventListener("click", markAllUnacquired);
-            }
             // Filter status buttons (delegated)
             document.querySelectorAll(".filter-status-btn").forEach(btn => {
                 btn.addEventListener("click", () => {
                     const f = btn.dataset.filter;
-                    filterStatus = filterStatus === f ? "" : f;
+                    if (f === "all") {
+                        filterStatus = "";
+                        searchFilter = "";
+                        const inp = getSearchEl(); if (inp) inp.value = "";
+                    } else {
+                        filterStatus = filterStatus === f ? "" : f;
+                        if (filterStatus) { searchFilter = ""; const inp = getSearchEl(); if (inp) inp.value = ""; }
+                    }
                     renderCards();
                 });
             });
@@ -491,12 +467,9 @@ function renderCards() {
     } else {
         const countEl = document.getElementById("bulkCount");
         if (countEl) countEl.textContent = `${acquiredCount}/${currentCollection.cards.length}`;
-        const markBtn = document.getElementById("markAllBtn");
-        if (markBtn) markBtn.textContent = acquiredCount === currentCollection.cards.length ? '' : 'Marcar todas';
-        const unmarkBtn = document.getElementById("unmarkAllBtn");
-        if (unmarkBtn) unmarkBtn.textContent = acquiredCount > 0 ? 'Desmarcar todas' : '';
         document.querySelectorAll(".filter-status-btn").forEach(btn => {
-            btn.classList.toggle("active", btn.dataset.filter === filterStatus);
+            const isActive = btn.dataset.filter === "all" ? !filterStatus : btn.dataset.filter === filterStatus;
+            btn.classList.toggle("active", isActive);
         });
     }
 
@@ -599,6 +572,7 @@ document.addEventListener("click", (e) => {
     searchFilter = num;
     const input = getSearchEl();
     if (input) input.value = num;
+    if (!num) filterStatus = "";
     renderCards();
 });
 
@@ -777,16 +751,6 @@ cardModal.addEventListener("mousedown", (e) => {
         const total = currentCollection.cards.length;
         const ac = getAcquiredCards();
         countEl.textContent = `${ac.length}/${total}`;
-    }
-    const markBtn = document.getElementById("markAllBtn");
-    if (markBtn) {
-        const ac = getAcquiredCards();
-        markBtn.textContent = ac.length === currentCollection.cards.length ? '' : 'Marcar todas';
-    }
-    const unmarkBtn = document.getElementById("unmarkAllBtn");
-    if (unmarkBtn) {
-        const ac = getAcquiredCards();
-        unmarkBtn.textContent = ac.length > 0 ? 'Desmarcar todas' : '';
     }
 });
 
