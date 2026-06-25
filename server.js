@@ -1,16 +1,16 @@
 const express = require('express');
-const Database = require('better-sqlite3');
 const path = require('path');
 const fs = require('fs');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
 
+const { initDatabase, T, isPostgres } = require('./db');
+
 const CACHE_FILE = path.join(__dirname, 'seed-cache.json');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-const DB_PATH = process.env.DB_PATH || path.join(__dirname, 'pokecollection.db');
 const JWT_SECRET = process.env.JWT_SECRET || (() => {
     const keyFile = path.join(__dirname, '.jwt_secret');
     try {
@@ -23,71 +23,6 @@ const JWT_SECRET = process.env.JWT_SECRET || (() => {
 
 app.use(express.json());
 app.use(express.static(path.join(__dirname)));
-
-function initDatabase() {
-    const db = new Database(DB_PATH);
-    db.pragma('journal_mode = WAL');
-
-    db.exec(`
-        CREATE TABLE IF NOT EXISTS collections (
-            id TEXT PRIMARY KEY,
-            name TEXT NOT NULL,
-            year INTEGER NOT NULL,
-            country TEXT NOT NULL,
-            description TEXT NOT NULL
-        );
-
-        CREATE TABLE IF NOT EXISTS cards (
-            id TEXT NOT NULL,
-            collection_id TEXT NOT NULL,
-            name TEXT NOT NULL,
-            number TEXT NOT NULL,
-            total TEXT NOT NULL,
-            image TEXT NOT NULL,
-            type TEXT NOT NULL,
-            hp TEXT NOT NULL,
-            rarity TEXT NOT NULL,
-            stage TEXT NOT NULL,
-            weakness TEXT NOT NULL,
-            resistance TEXT NOT NULL,
-            retreat TEXT NOT NULL,
-            attacks TEXT NOT NULL,
-            sort_order INTEGER NOT NULL DEFAULT 0,
-            PRIMARY KEY (collection_id, id),
-            FOREIGN KEY (collection_id) REFERENCES collections(id)
-        );
-
-        CREATE TABLE IF NOT EXISTS users (
-            id TEXT PRIMARY KEY,
-            username TEXT NOT NULL UNIQUE,
-            name TEXT NOT NULL DEFAULT '',
-            password TEXT NOT NULL,
-            created_at TEXT NOT NULL DEFAULT (datetime('now'))
-        );
-
-        CREATE TABLE IF NOT EXISTS user_stock (
-            user_id TEXT NOT NULL,
-            collection_id TEXT NOT NULL,
-            card_id TEXT NOT NULL,
-            finish_none INTEGER NOT NULL DEFAULT 0,
-            finish_holo INTEGER NOT NULL DEFAULT 0,
-            finish_reverse INTEGER NOT NULL DEFAULT 0,
-            PRIMARY KEY (user_id, collection_id, card_id)
-        );
-
-        CREATE TABLE IF NOT EXISTS user_acquired (
-            user_id TEXT NOT NULL,
-            collection_id TEXT NOT NULL,
-            card_id TEXT NOT NULL,
-            PRIMARY KEY (user_id, collection_id, card_id)
-        );
-    `);
-
-    // Migration: add name column to users if missing
-    try { db.exec("ALTER TABLE users ADD COLUMN name TEXT NOT NULL DEFAULT ''"); } catch (_) {}
-
-    return db;
-}
 
 function generateUserId() { return crypto.randomUUID(); }
 
@@ -213,13 +148,12 @@ const SAMPLE_COLLECTIONS = [
 ];
 
 async function seedDatabase(db) {
-    const colCount = db.prepare('SELECT COUNT(*) as cnt FROM collections').get();
-    if (colCount.cnt > 0) {
-        // Generate cache from existing database data if cache is missing
+    const col = await db.get(`SELECT COUNT(*) as cnt FROM ${T('collections')}`);
+    if (col.cnt > 0) {
         if (!loadCardCache()) {
-            const cols = db.prepare('SELECT id, name, year, country, description FROM collections').all();
-            const enCards = db.prepare("SELECT * FROM cards WHERE collection_id = 'chaos-rising' ORDER BY sort_order").all();
-            const ptCards = db.prepare("SELECT * FROM cards WHERE collection_id = 'chaos-rising-ptbr' ORDER BY sort_order").all();
+            const cols = await db.all(`SELECT id, name, year, country, description FROM ${T('collections')}`);
+            const enCards = await db.all(`SELECT * FROM ${T('cards')} WHERE collection_id = $1 ORDER BY sort_order`, ['chaos-rising']);
+            const ptCards = await db.all(`SELECT * FROM ${T('cards')} WHERE collection_id = $1 ORDER BY sort_order`, ['chaos-rising-ptbr']);
             if (enCards.length && ptCards.length) {
                 const mapCard = c => ({ ...c, attacks: JSON.parse(c.attacks) });
                 saveCardCache(enCards.map(mapCard), ptCards.map(mapCard));
@@ -228,9 +162,6 @@ async function seedDatabase(db) {
         }
         return;
     }
-
-    const insertCol = db.prepare('INSERT INTO collections (id, name, year, country, description) VALUES (?, ?, ?, ?, ?)');
-    const insertCard = db.prepare('INSERT INTO cards (id, collection_id, name, number, total, image, type, hp, rarity, stage, weakness, resistance, retreat, attacks, sort_order) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
 
     console.log('Fetching card data from TCGDex API...');
     const cached = loadCardCache();
@@ -267,219 +198,250 @@ async function seedDatabase(db) {
         }
     ];
 
-    const tx = db.transaction(() => {
+    const txFn = db.transaction(async (tx) => {
         for (const col of allCollections) {
-            insertCol.run(col.id, col.name, col.year, col.country, col.description);
-            col.cards.forEach((card, idx) => {
-                insertCard.run(
-                    card.id, col.id, card.name, card.number, card.total,
-                    card.image, card.type, card.hp, card.rarity, card.stage,
-                    card.weakness, card.resistance, card.retreat,
-                    JSON.stringify(card.attacks || []), idx
-                );
-            });
+            await tx.run(`INSERT INTO ${T('collections')} (id, name, year, country, description) VALUES ($1, $2, $3, $4, $5)`, [col.id, col.name, col.year, col.country, col.description]);
+            for (let idx = 0; idx < col.cards.length; idx++) {
+                const card = col.cards[idx];
+                await tx.run(`INSERT INTO ${T('cards')} (id, collection_id, name, number, total, image, type, hp, rarity, stage, weakness, resistance, retreat, attacks, sort_order) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)`,
+                    [card.id, col.id, card.name, card.number, card.total, card.image, card.type, card.hp, card.rarity, card.stage, card.weakness, card.resistance, card.retreat, JSON.stringify(card.attacks || []), idx]);
+            }
         }
     });
+    await txFn();
 
-    tx();
     const totalCards = allCollections.reduce((s, c) => s + c.cards.length, 0);
     console.log('Database seeded: ' + allCollections.length + ' collections, ' + totalCards + ' cards');
 }
 
-const db = initDatabase();
-(async () => {
+let db;
+
+async function main() {
+    db = await initDatabase();
     await seedDatabase(db);
     app.listen(PORT, '0.0.0.0', () => {
-        console.log('PokéCollection server running on http://localhost:' + PORT);
+        console.log('PokéCollection server running on http://localhost:' + PORT + (isPostgres ? ' (PostgreSQL)' : ' (SQLite)'));
     });
-})();
+}
 
-app.get('/api/collections', (req, res) => {
-    const rows = db.prepare('SELECT id, name, year, country, description FROM collections ORDER BY id').all();
-    const counts = db.prepare('SELECT collection_id, COUNT(*) as cnt FROM cards GROUP BY collection_id').all();
-    const countMap = {};
-    for (const c of counts) countMap[c.collection_id] = c.cnt;
-    res.json(rows.map(r => ({ ...r, cards: countMap[r.id] || 0 })));
+main().catch(e => { console.error('Failed to start:', e); process.exit(1); });
+
+// --- Routes ---
+
+app.get('/api/collections', async (req, res) => {
+    try {
+        const rows = await db.all(`SELECT id, name, year, country, description FROM ${T('collections')} ORDER BY id`);
+        const counts = await db.all(`SELECT collection_id, COUNT(*) as cnt FROM ${T('cards')} GROUP BY collection_id`);
+        const countMap = {};
+        for (const c of counts) countMap[c.collection_id] = c.cnt;
+        res.json(rows.map(r => ({ ...r, cards: countMap[r.id] || 0 })));
+    } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-app.get('/api/collections/:id', (req, res) => {
-    const col = db.prepare('SELECT * FROM collections WHERE id = ?').get(req.params.id);
-    if (!col) return res.status(404).json({ error: 'Collection not found' });
-    const cards = db.prepare('SELECT * FROM cards WHERE collection_id = ? ORDER BY sort_order').all(req.params.id);
-    res.json({ ...col, cards: cards.map(c => ({ ...c, attacks: JSON.parse(c.attacks) })) });
+app.get('/api/collections/:id', async (req, res) => {
+    try {
+        const col = await db.get(`SELECT * FROM ${T('collections')} WHERE id = $1`, [req.params.id]);
+        if (!col) return res.status(404).json({ error: 'Collection not found' });
+        const cards = await db.all(`SELECT * FROM ${T('cards')} WHERE collection_id = $1 ORDER BY sort_order`, [req.params.id]);
+        res.json({ ...col, cards: cards.map(c => ({ ...c, attacks: JSON.parse(c.attacks) })) });
+    } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 // --- Auth routes ---
-app.post('/api/auth/register', (req, res) => {
-    const { username, password, name } = req.body;
-    if (!username || !password) return res.status(400).json({ error: 'Username and password required' });
-    if (username.length < 3) return res.status(400).json({ error: 'Username must have at least 3 characters' });
-    if (password.length < 4) return res.status(400).json({ error: 'Password must have at least 4 characters' });
-    const displayName = (name || '').trim();
-    if (displayName && displayName.length < 3) return res.status(400).json({ error: 'Name must have at least 3 characters' });
-    const existing = db.prepare('SELECT id FROM users WHERE username = ?').get(username);
-    if (existing) return res.status(409).json({ error: 'Username already taken' });
-    const id = generateUserId();
-    const hash = bcrypt.hashSync(password, 10);
-    db.prepare('INSERT INTO users (id, username, name, password) VALUES (?, ?, ?, ?)').run(id, username, displayName, hash);
-    const token = jwt.sign({ userId: id, username, name: displayName }, JWT_SECRET, { expiresIn: '30d' });
-    res.status(201).json({ token, user: { id, username, name: displayName } });
+
+app.post('/api/auth/register', async (req, res) => {
+    try {
+        const { username, password, name } = req.body;
+        if (!username || !password) return res.status(400).json({ error: 'Username and password required' });
+        if (username.length < 3) return res.status(400).json({ error: 'Username must have at least 3 characters' });
+        if (password.length < 4) return res.status(400).json({ error: 'Password must have at least 4 characters' });
+        const displayName = (name || '').trim();
+        if (displayName && displayName.length < 3) return res.status(400).json({ error: 'Name must have at least 3 characters' });
+        const existing = await db.get(`SELECT id FROM ${T('users')} WHERE username = $1`, [username]);
+        if (existing) return res.status(409).json({ error: 'Username already taken' });
+        const id = generateUserId();
+        const hash = bcrypt.hashSync(password, 10);
+        await db.run(`INSERT INTO ${T('users')} (id, username, name, password) VALUES ($1, $2, $3, $4)`, [id, username, displayName, hash]);
+        const token = jwt.sign({ userId: id, username, name: displayName }, JWT_SECRET, { expiresIn: '30d' });
+        res.status(201).json({ token, user: { id, username, name: displayName } });
+    } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-app.post('/api/auth/login', (req, res) => {
-    const { username, password } = req.body;
-    if (!username || !password) return res.status(400).json({ error: 'Username and password required' });
-    const user = db.prepare('SELECT * FROM users WHERE username = ?').get(username);
-    if (!user || !bcrypt.compareSync(password, user.password)) return res.status(401).json({ error: 'Invalid username or password' });
-    const token = jwt.sign({ userId: user.id, username: user.username, name: user.name }, JWT_SECRET, { expiresIn: '30d' });
-    res.json({ token, user: { id: user.id, username: user.username, name: user.name } });
+app.post('/api/auth/login', async (req, res) => {
+    try {
+        const { username, password } = req.body;
+        if (!username || !password) return res.status(400).json({ error: 'Username and password required' });
+        const user = await db.get(`SELECT * FROM ${T('users')} WHERE username = $1`, [username]);
+        if (!user || !bcrypt.compareSync(password, user.password)) return res.status(401).json({ error: 'Invalid username or password' });
+        const token = jwt.sign({ userId: user.id, username: user.username, name: user.name }, JWT_SECRET, { expiresIn: '30d' });
+        res.json({ token, user: { id: user.id, username: user.username, name: user.name } });
+    } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 // --- User data routes (require auth) ---
-app.get('/api/user/stock/:collectionId', authenticateToken, (req, res) => {
-    const rows = db.prepare('SELECT card_id, finish_none, finish_holo, finish_reverse FROM user_stock WHERE user_id = ? AND collection_id = ?').all(req.user.userId, req.params.collectionId);
-    const stock = {};
-    for (const r of rows) {
-        stock[r.card_id] = { none: r.finish_none, holo: r.finish_holo, reverse: r.finish_reverse };
-    }
-    res.json(stock);
-});
 
-app.put('/api/user/stock/:collectionId', authenticateToken, (req, res) => {
-    const { collectionId } = req.params;
-    const stock = req.body;
-    const tx = db.transaction(() => {
-        db.prepare('DELETE FROM user_stock WHERE user_id = ? AND collection_id = ?').run(req.user.userId, collectionId);
-        const insert = db.prepare('INSERT INTO user_stock (user_id, collection_id, card_id, finish_none, finish_holo, finish_reverse) VALUES (?, ?, ?, ?, ?, ?)');
-        for (const [cardId, finishes] of Object.entries(stock)) {
-            insert.run(req.user.userId, collectionId, cardId, finishes.none || 0, finishes.holo || 0, finishes.reverse || 0);
+app.get('/api/user/stock/:collectionId', authenticateToken, async (req, res) => {
+    try {
+        const rows = await db.all(`SELECT card_id, finish_none, finish_holo, finish_reverse FROM ${T('user_stock')} WHERE user_id = $1 AND collection_id = $2`, [req.user.userId, req.params.collectionId]);
+        const stock = {};
+        for (const r of rows) {
+            stock[r.card_id] = { none: r.finish_none, holo: r.finish_holo, reverse: r.finish_reverse };
         }
-    });
-    tx();
-    res.json({ ok: true });
+        res.json(stock);
+    } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-app.get('/api/user/acquired/:collectionId', authenticateToken, (req, res) => {
-    const rows = db.prepare('SELECT card_id FROM user_acquired WHERE user_id = ? AND collection_id = ? ORDER BY card_id').all(req.user.userId, req.params.collectionId);
-    res.json({ ids: rows.map(r => r.card_id) });
-});
-
-app.put('/api/user/acquired/:collectionId', authenticateToken, (req, res) => {
-    const { collectionId } = req.params;
-    const { ids } = req.body;
-    const userId = req.user.userId;
-    const tx = db.transaction(() => {
-        db.prepare('DELETE FROM user_acquired WHERE user_id = ? AND collection_id = ?').run(userId, collectionId);
-        if (ids && ids.length > 0) {
-            const insert = db.prepare('INSERT INTO user_acquired (user_id, collection_id, card_id) VALUES (?, ?, ?)');
-            for (const cardId of ids) {
-                insert.run(userId, collectionId, cardId);
-            }
-        }
-    });
-    tx();
-    res.json({ ok: true });
-});
-
-app.get('/api/user/all/:collectionId', authenticateToken, (req, res) => {
-    const userId = req.user.userId;
-    const stockRows = db.prepare('SELECT card_id, finish_none, finish_holo, finish_reverse FROM user_stock WHERE user_id = ? AND collection_id = ?').all(userId, req.params.collectionId);
-    const stock = {};
-    for (const r of stockRows) {
-        stock[r.card_id] = { none: r.finish_none, holo: r.finish_holo, reverse: r.finish_reverse };
-    }
-    const acqRows = db.prepare('SELECT card_id FROM user_acquired WHERE user_id = ? AND collection_id = ? ORDER BY card_id').all(userId, req.params.collectionId);
-    res.json({ stock, acquired: acqRows.map(r => r.card_id) });
-});
-
-app.put('/api/user/all/:collectionId', authenticateToken, (req, res) => {
-    const { collectionId } = req.params;
-    const { stock, acquired } = req.body;
-    const userId = req.user.userId;
-    const tx = db.transaction(() => {
-        db.prepare('DELETE FROM user_stock WHERE user_id = ? AND collection_id = ?').run(userId, collectionId);
-        db.prepare('DELETE FROM user_acquired WHERE user_id = ? AND collection_id = ?').run(userId, collectionId);
-        if (stock) {
-            const insert = db.prepare('INSERT INTO user_stock (user_id, collection_id, card_id, finish_none, finish_holo, finish_reverse) VALUES (?, ?, ?, ?, ?, ?)');
+app.put('/api/user/stock/:collectionId', authenticateToken, async (req, res) => {
+    try {
+        const { collectionId } = req.params;
+        const stock = req.body;
+        const txFn = db.transaction(async (tx) => {
+            await tx.run(`DELETE FROM ${T('user_stock')} WHERE user_id = $1 AND collection_id = $2`, [req.user.userId, collectionId]);
             for (const [cardId, finishes] of Object.entries(stock)) {
-                insert.run(userId, collectionId, cardId, finishes.none || 0, finishes.holo || 0, finishes.reverse || 0);
+                await tx.run(`INSERT INTO ${T('user_stock')} (user_id, collection_id, card_id, finish_none, finish_holo, finish_reverse) VALUES ($1, $2, $3, $4, $5, $6)`,
+                    [req.user.userId, collectionId, cardId, finishes.none || 0, finishes.holo || 0, finishes.reverse || 0]);
             }
-        }
-        if (acquired && acquired.length > 0) {
-            const insert = db.prepare('INSERT INTO user_acquired (user_id, collection_id, card_id) VALUES (?, ?, ?)');
-            for (const cardId of acquired) {
-                insert.run(userId, collectionId, cardId);
-            }
-        }
-    });
-    tx();
-    res.json({ ok: true });
+        });
+        await txFn();
+        res.json({ ok: true });
+    } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-app.post('/api/migrate', authenticateToken, (req, res) => {
-    const { collectionId, stock, acquired } = req.body;
-    const userId = req.user.userId;
-    if (!collectionId) return res.status(400).json({ error: 'collectionId required' });
-    const tx = db.transaction(() => {
-        db.prepare('DELETE FROM user_stock WHERE user_id = ? AND collection_id = ?').run(userId, collectionId);
-        db.prepare('DELETE FROM user_acquired WHERE user_id = ? AND collection_id = ?').run(userId, collectionId);
-        if (stock) {
-            const insert = db.prepare('INSERT INTO user_stock (user_id, collection_id, card_id, finish_none, finish_holo, finish_reverse) VALUES (?, ?, ?, ?, ?, ?)');
-            for (const [cardId, finishes] of Object.entries(stock)) {
-                insert.run(userId, collectionId, cardId, finishes.none || 0, finishes.holo || 0, finishes.reverse || 0);
-            }
-        }
-        if (acquired && acquired.length > 0) {
-            const insert = db.prepare('INSERT INTO user_acquired (user_id, collection_id, card_id) VALUES (?, ?, ?)');
-            for (const cardId of acquired) {
-                insert.run(userId, collectionId, cardId);
-            }
-        }
-    });
-    tx();
-    res.json({ ok: true, migrated: true });
+app.get('/api/user/acquired/:collectionId', authenticateToken, async (req, res) => {
+    try {
+        const rows = await db.all(`SELECT card_id FROM ${T('user_acquired')} WHERE user_id = $1 AND collection_id = $2 ORDER BY card_id`, [req.user.userId, req.params.collectionId]);
+        res.json({ ids: rows.map(r => r.card_id) });
+    } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-app.get('/api/users', authenticateToken, (req, res) => {
-    const rows = db.prepare('SELECT username, name, created_at FROM users ORDER BY created_at').all();
-    res.json(rows);
+app.put('/api/user/acquired/:collectionId', authenticateToken, async (req, res) => {
+    try {
+        const { collectionId } = req.params;
+        const { ids } = req.body;
+        const userId = req.user.userId;
+        const txFn = db.transaction(async (tx) => {
+            await tx.run(`DELETE FROM ${T('user_acquired')} WHERE user_id = $1 AND collection_id = $2`, [userId, collectionId]);
+            if (ids && ids.length > 0) {
+                for (const cardId of ids) {
+                    await tx.run(`INSERT INTO ${T('user_acquired')} (user_id, collection_id, card_id) VALUES ($1, $2, $3)`, [userId, collectionId, cardId]);
+                }
+            }
+        });
+        await txFn();
+        res.json({ ok: true });
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.get('/api/user/all/:collectionId', authenticateToken, async (req, res) => {
+    try {
+        const userId = req.user.userId;
+        const stockRows = await db.all(`SELECT card_id, finish_none, finish_holo, finish_reverse FROM ${T('user_stock')} WHERE user_id = $1 AND collection_id = $2`, [userId, req.params.collectionId]);
+        const stock = {};
+        for (const r of stockRows) {
+            stock[r.card_id] = { none: r.finish_none, holo: r.finish_holo, reverse: r.finish_reverse };
+        }
+        const acqRows = await db.all(`SELECT card_id FROM ${T('user_acquired')} WHERE user_id = $1 AND collection_id = $2 ORDER BY card_id`, [userId, req.params.collectionId]);
+        res.json({ stock, acquired: acqRows.map(r => r.card_id) });
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.put('/api/user/all/:collectionId', authenticateToken, async (req, res) => {
+    try {
+        const { collectionId } = req.params;
+        const { stock, acquired } = req.body;
+        const userId = req.user.userId;
+        const txFn = db.transaction(async (tx) => {
+            await tx.run(`DELETE FROM ${T('user_stock')} WHERE user_id = $1 AND collection_id = $2`, [userId, collectionId]);
+            await tx.run(`DELETE FROM ${T('user_acquired')} WHERE user_id = $1 AND collection_id = $2`, [userId, collectionId]);
+            if (stock) {
+                for (const [cardId, finishes] of Object.entries(stock)) {
+                    await tx.run(`INSERT INTO ${T('user_stock')} (user_id, collection_id, card_id, finish_none, finish_holo, finish_reverse) VALUES ($1, $2, $3, $4, $5, $6)`,
+                        [userId, collectionId, cardId, finishes.none || 0, finishes.holo || 0, finishes.reverse || 0]);
+                }
+            }
+            if (acquired && acquired.length > 0) {
+                for (const cardId of acquired) {
+                    await tx.run(`INSERT INTO ${T('user_acquired')} (user_id, collection_id, card_id) VALUES ($1, $2, $3)`, [userId, collectionId, cardId]);
+                }
+            }
+        });
+        await txFn();
+        res.json({ ok: true });
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.post('/api/migrate', authenticateToken, async (req, res) => {
+    try {
+        const { collectionId, stock, acquired } = req.body;
+        const userId = req.user.userId;
+        if (!collectionId) return res.status(400).json({ error: 'collectionId required' });
+        const txFn = db.transaction(async (tx) => {
+            await tx.run(`DELETE FROM ${T('user_stock')} WHERE user_id = $1 AND collection_id = $2`, [userId, collectionId]);
+            await tx.run(`DELETE FROM ${T('user_acquired')} WHERE user_id = $1 AND collection_id = $2`, [userId, collectionId]);
+            if (stock) {
+                for (const [cardId, finishes] of Object.entries(stock)) {
+                    await tx.run(`INSERT INTO ${T('user_stock')} (user_id, collection_id, card_id, finish_none, finish_holo, finish_reverse) VALUES ($1, $2, $3, $4, $5, $6)`,
+                        [userId, collectionId, cardId, finishes.none || 0, finishes.holo || 0, finishes.reverse || 0]);
+                }
+            }
+            if (acquired && acquired.length > 0) {
+                for (const cardId of acquired) {
+                    await tx.run(`INSERT INTO ${T('user_acquired')} (user_id, collection_id, card_id) VALUES ($1, $2, $3)`, [userId, collectionId, cardId]);
+                }
+            }
+        });
+        await txFn();
+        res.json({ ok: true, migrated: true });
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.get('/api/users', authenticateToken, async (req, res) => {
+    try {
+        const rows = await db.all(`SELECT username, name, created_at FROM ${T('users')} ORDER BY created_at`);
+        res.json(rows);
+    } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 app.get('/health', (req, res) => {
-    res.json({ status: 'ok', db: !!db.open });
+    res.json({ status: 'ok', db: !!db && db.open });
 });
 
-app.get('/api/user/export/:collectionId', authenticateToken, (req, res) => {
-    const { collectionId } = req.params;
-    const userId = req.user.userId;
-    const stockRows = db.prepare('SELECT card_id, finish_none, finish_holo, finish_reverse FROM user_stock WHERE user_id = ? AND collection_id = ?').all(userId, collectionId);
-    const stock = {};
-    for (const r of stockRows) stock[r.card_id] = { none: r.finish_none, holo: r.finish_holo, reverse: r.finish_reverse };
-    const acqRows = db.prepare('SELECT card_id FROM user_acquired WHERE user_id = ? AND collection_id = ? ORDER BY card_id').all(userId, collectionId);
-    res.json({ collectionId, stock, acquired: acqRows.map(r => r.card_id), exportedAt: new Date().toISOString() });
+app.get('/api/user/export/:collectionId', authenticateToken, async (req, res) => {
+    try {
+        const { collectionId } = req.params;
+        const userId = req.user.userId;
+        const stockRows = await db.all(`SELECT card_id, finish_none, finish_holo, finish_reverse FROM ${T('user_stock')} WHERE user_id = $1 AND collection_id = $2`, [userId, collectionId]);
+        const stock = {};
+        for (const r of stockRows) stock[r.card_id] = { none: r.finish_none, holo: r.finish_holo, reverse: r.finish_reverse };
+        const acqRows = await db.all(`SELECT card_id FROM ${T('user_acquired')} WHERE user_id = $1 AND collection_id = $2 ORDER BY card_id`, [userId, collectionId]);
+        res.json({ collectionId, stock, acquired: acqRows.map(r => r.card_id), exportedAt: new Date().toISOString() });
+    } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-app.post('/api/user/import/:collectionId', authenticateToken, (req, res) => {
-    const { collectionId } = req.params;
-    const { stock, acquired } = req.body;
-    const userId = req.user.userId;
-    if (!stock && !acquired) return res.status(400).json({ error: 'Forneça stock e/ou acquired no body' });
-    const tx = db.transaction(() => {
-        if (stock) {
-            db.prepare('DELETE FROM user_stock WHERE user_id = ? AND collection_id = ?').run(userId, collectionId);
-            const insert = db.prepare('INSERT INTO user_stock (user_id, collection_id, card_id, finish_none, finish_holo, finish_reverse) VALUES (?, ?, ?, ?, ?, ?)');
-            for (const [cardId, finishes] of Object.entries(stock)) {
-                insert.run(userId, collectionId, cardId, finishes.none || 0, finishes.holo || 0, finishes.reverse || 0);
+app.post('/api/user/import/:collectionId', authenticateToken, async (req, res) => {
+    try {
+        const { collectionId } = req.params;
+        const { stock, acquired } = req.body;
+        const userId = req.user.userId;
+        if (!stock && !acquired) return res.status(400).json({ error: 'Forneça stock e/ou acquired no body' });
+        const txFn = db.transaction(async (tx) => {
+            if (stock) {
+                await tx.run(`DELETE FROM ${T('user_stock')} WHERE user_id = $1 AND collection_id = $2`, [userId, collectionId]);
+                for (const [cardId, finishes] of Object.entries(stock)) {
+                    await tx.run(`INSERT INTO ${T('user_stock')} (user_id, collection_id, card_id, finish_none, finish_holo, finish_reverse) VALUES ($1, $2, $3, $4, $5, $6)`,
+                        [userId, collectionId, cardId, finishes.none || 0, finishes.holo || 0, finishes.reverse || 0]);
+                }
             }
-        }
-        if (acquired && acquired.length > 0) {
-            db.prepare('DELETE FROM user_acquired WHERE user_id = ? AND collection_id = ?').run(userId, collectionId);
-            const insert = db.prepare('INSERT INTO user_acquired (user_id, collection_id, card_id) VALUES (?, ?, ?)');
-            for (const cardId of acquired) insert.run(userId, collectionId, cardId);
-        }
-    });
-    tx();
-    res.json({ ok: true, imported: true });
+            if (acquired && acquired.length > 0) {
+                await tx.run(`DELETE FROM ${T('user_acquired')} WHERE user_id = $1 AND collection_id = $2`, [userId, collectionId]);
+                for (const cardId of acquired) {
+                    await tx.run(`INSERT INTO ${T('user_acquired')} (user_id, collection_id, card_id) VALUES ($1, $2, $3)`, [userId, collectionId, cardId]);
+                }
+            }
+        });
+        await txFn();
+        res.json({ ok: true, imported: true });
+    } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 app.get('*', (req, res) => {
