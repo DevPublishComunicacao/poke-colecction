@@ -440,6 +440,11 @@ app.post('/api/migrate', authenticateToken, (req, res) => {
     res.json({ ok: true, migrated: true });
 });
 
+app.get('/api/users', authenticateToken, (req, res) => {
+    const rows = db.prepare('SELECT username, name, created_at FROM users ORDER BY created_at').all();
+    res.json(rows);
+});
+
 app.get('/health', (req, res) => {
     res.json({ status: 'ok', db: !!db.open });
 });
