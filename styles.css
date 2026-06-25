@@ -664,6 +664,36 @@ body {
     color: var(--text-primary);
 }
 
+/* Filter status buttons (Adquiridas / Faltantes) */
+.filter-status-group {
+    display: flex;
+    gap: 6px;
+}
+.filter-status-btn {
+    padding: 6px 14px;
+    border-radius: 10px;
+    border: 1px solid var(--border-color);
+    background: rgba(255, 255, 255, 0.03);
+    color: var(--text-secondary);
+    font-size: 12px;
+    font-weight: 600;
+    font-family: inherit;
+    cursor: pointer;
+    transition: all 0.25s ease;
+    white-space: nowrap;
+}
+.filter-status-btn:hover {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(255, 255, 255, 0.2);
+    color: var(--text-primary);
+}
+.filter-status-btn.active {
+    background: rgba(93, 91, 246, 0.2);
+    border-color: var(--primary-color);
+    color: var(--primary-color);
+    box-shadow: 0 0 10px var(--primary-glow);
+}
+
 /* Bulk search inside bulk bar — centered */
 .bulk-search {
     position: relative;

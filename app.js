@@ -129,6 +129,7 @@ function setSelectedCollectionId(id) {
 // State variables (will be set after async init)
 let currentCollection = null;
 let searchFilter = "";
+let filterStatus = ""; // "", "acquired", "missing"
 
 async function initApp() {
     try {
@@ -425,12 +426,15 @@ function updateCollectionInfo() {
 function renderCards() {
     const query = searchFilter.toLowerCase().trim();
     const cardStock = getCardStock();
-    const filtered = currentCollection.cards.filter(card => 
+    const allCards = currentCollection.cards.filter(card => 
         card.name.toLowerCase().includes(query) || 
         card.type.toLowerCase().includes(query) ||
         card.rarity.toLowerCase().includes(query) ||
         card.number.toLowerCase().includes(query)
     );
+    const filtered = filterStatus === "acquired" ? allCards.filter(c => getAcquiredCards().includes(c.id)) :
+                     filterStatus === "missing"  ? allCards.filter(c => !getAcquiredCards().includes(c.id)) :
+                     allCards;
 
     resultsCount.textContent = `Exibindo ${filtered.length} de ${currentCollection.cards.length} cartas`;
 
@@ -457,6 +461,10 @@ function renderCards() {
                         <input type="text" id="cardSearch" placeholder="Buscar..." aria-label="Buscar carta" autocomplete="off">
                         <div class="search-autocomplete" id="searchAutocomplete"></div>
                     </div>
+                    <div class="filter-status-group">
+                        <button class="filter-status-btn${filterStatus === 'acquired' ? ' active' : ''}" data-filter="acquired">Adquiridas</button>
+                        <button class="filter-status-btn${filterStatus === 'missing' ? ' active' : ''}" data-filter="missing">Faltantes</button>
+                    </div>
                     ${loggedIn ? `<button class="bulk-btn" id="markAllBtn">${acquiredCount === currentCollection.cards.length ? '' : 'Marcar'} todas</button>
                     <button class="bulk-btn" id="unmarkAllBtn">${acquiredCount > 0 ? 'Desmarcar' : ''} todas</button>` : ''}
                 </div>
@@ -466,6 +474,14 @@ function renderCards() {
                 document.getElementById("markAllBtn").addEventListener("click", markAllAcquired);
                 document.getElementById("unmarkAllBtn").addEventListener("click", markAllUnacquired);
             }
+            // Filter status buttons (delegated)
+            document.querySelectorAll(".filter-status-btn").forEach(btn => {
+                btn.addEventListener("click", () => {
+                    const f = btn.dataset.filter;
+                    filterStatus = filterStatus === f ? "" : f;
+                    renderCards();
+                });
+            });
             // Card index bar
             const bulkBar = document.querySelector(".bulk-bar");
             if (bulkBar) {
@@ -479,6 +495,9 @@ function renderCards() {
         if (markBtn) markBtn.textContent = acquiredCount === currentCollection.cards.length ? '' : 'Marcar todas';
         const unmarkBtn = document.getElementById("unmarkAllBtn");
         if (unmarkBtn) unmarkBtn.textContent = acquiredCount > 0 ? 'Desmarcar todas' : '';
+        document.querySelectorAll(".filter-status-btn").forEach(btn => {
+            btn.classList.toggle("active", btn.dataset.filter === filterStatus);
+        });
     }
 
     // Card index bar — update number pills
