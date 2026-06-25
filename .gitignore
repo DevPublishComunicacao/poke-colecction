@@ -11,5 +11,17 @@ rebuild-data.mjs
 refactor-app.js
 temp_check_rarities.js
 .jwt_secret
+.env
 *.log
+*.err
 .DS_Store
+pokecollection.db*
+collections-data.json
+me4_pt_data.txt
+fetch_log.txt
+fetch_pt.mjs
+extract-data.mjs
+rebuild-data.mjs
+refactor-app.js
+temp_check_rarities.js
+render.yaml

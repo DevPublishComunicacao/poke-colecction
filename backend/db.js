@@ -14,9 +14,10 @@ function fixSql(sql) {
 async function initDatabase() {
   if (isPostgres) {
     const { Pool } = require('pg');
+    const isLocal = process.env.DATABASE_URL.includes('@localhost') || process.env.DATABASE_URL.includes('@host.docker.internal');
     const pool = new Pool({
       connectionString: process.env.DATABASE_URL,
-      ssl: { rejectUnauthorized: false }
+      ...(isLocal ? {} : { ssl: { rejectUnauthorized: false } })
     });
     await createTablesPg(pool);
     return makePgDb(pool);
@@ -189,17 +190,21 @@ function makeSqliteDb(sqlite) {
     get: wrap((sql, params) => sqlite.prepare(fixSql(sql)).get(...(params || []))),
     run: wrap((sql, params) => sqlite.prepare(fixSql(sql)).run(...(params || []))),
     transaction(fn) {
-      return (...args) => {
-        const tx = sqlite.transaction((...txArgs) => {
-          const inner = {
-            all: (s, p) => sqlite.prepare(fixSql(s)).all(...(p || [])),
-            get: (s, p) => sqlite.prepare(fixSql(s)).get(...(p || [])),
-            run: (s, p) => sqlite.prepare(fixSql(s)).run(...(p || []))
-          };
-          return fn(inner, ...txArgs);
-        });
-        try { return Promise.resolve(tx(...args)); }
-        catch (e) { return Promise.reject(e); }
+      return async (...args) => {
+        const inner = {
+          all: (s, p) => sqlite.prepare(fixSql(s)).all(...(p || [])),
+          get: (s, p) => sqlite.prepare(fixSql(s)).get(...(p || [])),
+          run: (s, p) => sqlite.prepare(fixSql(s)).run(...(p || []))
+        };
+        try {
+          sqlite.exec('BEGIN');
+          const result = await fn(inner, ...args);
+          sqlite.exec('COMMIT');
+          return result;
+        } catch (e) {
+          sqlite.exec('ROLLBACK');
+          throw e;
+        }
       };
     },
     close: wrap(() => sqlite.close()),

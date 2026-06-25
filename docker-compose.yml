@@ -1,0 +1,16 @@
+services:
+  postgres:
+    image: postgres:18-alpine
+    container_name: poke-colecction-db
+    environment:
+      POSTGRES_USER: pokecollection
+      POSTGRES_PASSWORD: pokecollection
+      POSTGRES_DB: pokecollection_dev
+    ports:
+      - "5433:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql
+    restart: unless-stopped
+
+volumes:
+  pgdata:

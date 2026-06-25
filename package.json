@@ -2,14 +2,19 @@
   "name": "pokecolection",
   "version": "2.0.0",
   "description": "PokéCollection - Sistema de coleção de Pokémon TCG",
-  "main": "server.js",
+  "main": "backend/server.js",
   "engines": {
     "node": "22.x"
   },
   "scripts": {
-    "start": "node server.js",
-    "dev": "node server.js",
-    "setup": "node server.js --setup"
+    "start": "node backend/server.js",
+    "dev": "node backend/server.js",
+    "dev:pg": "node backend/server.js",
+    "setup": "node backend/server.js --setup",
+    "db:start": "docker compose up -d",
+    "db:stop": "docker compose down",
+    "db:reset": "docker compose down -v && docker compose up -d",
+    "migrate:pg": "node backend/scripts/migrate-to-pg.js"
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",
