@@ -127,17 +127,6 @@ function toggleAcquire(cardId) {
 }
 
 // --- Preferences ---
-function savePrefsLocal() {
-  if (!selectedColecao) return;
-  try {
-    localStorage.setItem('prefs', JSON.stringify({
-      colecao_id: selectedColecao.id,
-      expansao_id: selectedExpansao ? selectedExpansao.id : null,
-      pais_id: selectedPais ? selectedPais.id : null
-    }));
-  } catch (e) {}
-}
-
 async function savePrefsServer() {
   if (!isLoggedIn() || !selectedColecao || !selectedExpansao || !selectedPais) return;
   try {
@@ -154,7 +143,6 @@ async function savePrefsServer() {
 }
 
 async function saveAllPrefs() {
-  savePrefsLocal();
   await savePrefsServer();
 }
 
@@ -174,16 +162,6 @@ async function restorePrefs() {
       }
     } catch (e) {}
   }
-  // Fallback to localStorage
-  try {
-    const raw = localStorage.getItem('prefs');
-    if (raw) {
-      const p = JSON.parse(raw);
-      const c = colecoes.find(x => x.id === p.colecao_id);
-      if (c) selectedColecao = c;
-      return { localPrefs: p, found: !!c };
-    }
-  } catch (e) {}
   return { found: false };
 }
 
