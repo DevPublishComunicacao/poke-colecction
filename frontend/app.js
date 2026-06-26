@@ -51,6 +51,7 @@ function updateUserUI() {
 let _stockCache = null;
 let _acquiredCache = null;
 let _dataInitialized = false;
+let _adminOpen = false;
 
 function getAcquiredCards() {
   if (_acquiredCache) return [...new Set(_acquiredCache)];
@@ -716,14 +717,19 @@ function initAuth() {
     openAuthModal();
   });
 
-  document.getElementById('userGearBtn').addEventListener('click', () => {
+  function setAdminMenuVisible(show) {
     const selectors = document.querySelector('.cascade-selectors');
     const highlight = document.getElementById('collectionHighlight');
     const adminMenu = document.getElementById('adminMenu');
-    const isHidden = selectors && selectors.style.display === 'none';
-    if (selectors) selectors.style.display = isHidden ? '' : 'none';
-    if (highlight) highlight.style.display = isHidden ? '' : 'none';
-    if (adminMenu) adminMenu.style.display = isHidden ? 'none' : '';
+    if (selectors) selectors.style.display = show ? 'none' : '';
+    if (highlight) highlight.style.display = show ? 'none' : '';
+    if (adminMenu) adminMenu.style.display = show ? '' : 'none';
+  }
+
+  document.getElementById('userGearBtn').addEventListener('click', () => {
+    _adminOpen = !_adminOpen;
+    setAdminMenuVisible(_adminOpen);
+    localStorage.setItem('admin_menu_visible', _adminOpen ? '1' : '');
   });
 
   document.getElementById('authModalClose').addEventListener('click', closeAuthModal);
@@ -1404,8 +1410,17 @@ modalCard3D.addEventListener("mouseleave", () => {
   modalHoloShine.style.opacity = 0;
 });
 
+function restoreAdminMenuState() {
+  const gearBtn = document.getElementById('userGearBtn');
+  const wasVisible = localStorage.getItem('admin_menu_visible') === '1';
+  if (wasVisible && gearBtn && gearBtn.style.display !== 'none') {
+    _adminOpen = true;
+    setAdminMenuVisible(true);
+  }
+}
+
 // --- Entry point ---
 document.addEventListener("DOMContentLoaded", () => {
   initAuth();
-  initApp();
+  initApp().then(() => restoreAdminMenuState());
 });
