@@ -44,7 +44,7 @@ function updateUserUI() {
   span.textContent = isLogged ? (_authUser.name || _authUser.username) : 'Entrar';
   const gearBtn = document.getElementById('userGearBtn');
   if (gearBtn) {
-    gearBtn.style.display = isLogged && _authUser.username === 'dev.publishcomunicacao@gmail.com' ? '' : 'none';
+    gearBtn.classList.toggle('hidden', !(isLogged && _authUser.username === 'dev.publishcomunicacao@gmail.com'));
   }
 }
 
@@ -721,17 +721,16 @@ function initAuth() {
     const selectors = document.querySelector('.cascade-selectors');
     const highlight = document.getElementById('collectionHighlight');
     const adminMenu = document.getElementById('adminMenu');
-    if (selectors) selectors.style.setProperty('display', show ? 'none' : '', 'important');
-    if (highlight) highlight.style.setProperty('display', show ? 'none' : '', 'important');
-    if (adminMenu) adminMenu.style.setProperty('display', show ? 'flex' : 'none', 'important');
+    document.body.classList.toggle('admin-mode', show);
+    if (selectors) selectors.classList.toggle('hidden', show);
+    if (highlight) highlight.classList.toggle('hidden', show);
+    if (adminMenu) adminMenu.classList.toggle('open', show);
     _adminOpen = show;
   }
 
   document.getElementById('userGearBtn').addEventListener('click', () => {
-    const adminMenu = document.getElementById('adminMenu');
-    const currentlyHidden = adminMenu && adminMenu.style.getPropertyValue('display') === 'none';
-    setAdminMenuVisible(currentlyHidden);
-    localStorage.setItem('admin_menu_visible', currentlyHidden ? '1' : '');
+    setAdminMenuVisible(!_adminOpen);
+    localStorage.setItem('admin_menu_visible', !_adminOpen ? '1' : '');
   });
 
   document.querySelectorAll('.admin-menu-header').forEach(header => {
@@ -1432,7 +1431,7 @@ modalCard3D.addEventListener("mouseleave", () => {
 function restoreAdminMenuState() {
   const gearBtn = document.getElementById('userGearBtn');
   const wasVisible = localStorage.getItem('admin_menu_visible') === '1';
-  if (wasVisible && gearBtn && gearBtn.style.getPropertyValue('display') !== 'none') {
+  if (wasVisible && gearBtn && !gearBtn.classList.contains('hidden')) {
     setAdminMenuVisible(true);
   }
 }

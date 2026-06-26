@@ -1519,7 +1519,15 @@ body {
     .modal-content {
         padding: 0;
     }
-    .cascade-selectors {
+.hidden {
+    display: none !important;
+}
+
+.admin-menu.open {
+    display: flex !important;
+}
+
+.cascade-selectors {
         flex-direction: column;
         gap: 16px;
     }
