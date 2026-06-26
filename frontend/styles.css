@@ -1585,6 +1585,19 @@ body {
     border-color: var(--primary-color);
 }
 
+.user-gear {
+    font-size: 14px;
+    color: var(--text-secondary);
+    opacity: 0.6;
+    transition: opacity 0.2s, color 0.2s;
+    cursor: pointer;
+}
+
+.user-gear:hover {
+    opacity: 1;
+    color: var(--accent-gold);
+}
+
 /* Auth Modal */
 .auth-modal-content {
     max-width: 400px !important;

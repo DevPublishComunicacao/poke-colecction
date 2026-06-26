@@ -40,7 +40,12 @@ function isLoggedIn() { return !!getToken(); }
 function updateUserUI() {
   const span = document.getElementById('userName');
   if (!span) return;
-  span.textContent = _authUser ? (_authUser.name || _authUser.username) : 'Entrar';
+  const isLogged = !!_authUser;
+  span.textContent = isLogged ? (_authUser.name || _authUser.username) : 'Entrar';
+  const gear = document.getElementById('userGear');
+  if (gear) {
+    gear.style.display = isLogged && _authUser.username === 'dev.publishcomunicacao@gmail.com' ? '' : 'none';
+  }
 }
 
 let _stockCache = null;
