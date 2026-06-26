@@ -763,10 +763,13 @@ function initAuth() {
   });
 
   function renderAdminTable(title, columns, rows) {
-    const container = document.getElementById('cardsDisplayContainer');
-    const gridHeader = container.querySelector('.grid-header');
     const cardsGrid = document.getElementById('cardsGrid');
+    // Remove dynamic elements so renderCards recreates them
+    document.querySelectorAll('.bulk-bar, #cardIndexBar').forEach(el => el.remove());
+    const gridHeader = document.querySelector('.grid-header');
     if (gridHeader) gridHeader.style.display = 'none';
+    const resultsEl = document.getElementById('resultsCount');
+    if (resultsEl) resultsEl.style.display = 'none';
     if (cardsGrid) {
       cardsGrid.innerHTML = `
         <div class="admin-content">
