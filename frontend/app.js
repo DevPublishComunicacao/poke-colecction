@@ -267,6 +267,38 @@ function createDropdown(triggerId, menuId, selectedId, items, valueKey, labelKey
 }
 
 // --- Cascade logic ---
+async function resetAllDropdowns() {
+  selectedColecao = null;
+  selectedExpansao = null;
+  selectedPais = null;
+  expansoes = [];
+  paises = [];
+  currentCards = [];
+  document.getElementById('colecaoSelectedValue').textContent = 'Selecione...';
+  document.getElementById('colecaoSelectedValue').dataset.val = '';
+  document.getElementById('expansaoSelectedValue').textContent = 'Selecione...';
+  document.getElementById('expansaoSelectedValue').dataset.val = '';
+  document.getElementById('paisSelectedValue').textContent = 'Selecione...';
+  document.getElementById('paisSelectedValue').dataset.val = '';
+  const coMenu = document.getElementById('colecaoMenu');
+  if (coMenu) {
+    coMenu.querySelectorAll('.dropdown-item').forEach(el => el.classList.toggle('selected', !el.dataset.value));
+  }
+  document.getElementById('expansaoMenu').innerHTML = '<li class="dropdown-item selected" data-value="" role="option">Selecione...</li>';
+  document.getElementById('paisMenu').innerHTML = '<li class="dropdown-item selected" data-value="" role="option">Selecione...</li>';
+  document.getElementById('colName').textContent = '';
+  document.getElementById('colDesc').textContent = '';
+  document.getElementById('statTotal').textContent = '0';
+  const grid = document.getElementById('cardsGrid');
+  if (grid) grid.innerHTML = '<div class="empty-state"><i class="fa-regular fa-folder-open"></i><p>Selecione uma coleção, expansão e país para ver as cartas</p></div>';
+  const resultsEl = document.getElementById('resultsCount');
+  if (resultsEl) resultsEl.textContent = '';
+  const bulkBar = document.querySelector('.bulk-bar');
+  if (bulkBar) bulkBar.remove();
+  const indexBar = document.getElementById('cardIndexBar');
+  if (indexBar) indexBar.remove();
+}
+
 async function onColecaoClear() {
   selectedColecao = null;
   selectedExpansao = null;
@@ -664,7 +696,7 @@ function initAuth() {
       _stockCache = {};
       _acquiredCache = [];
       updateUserUI();
-      if (currentCards) renderCards();
+      resetAllDropdowns();
       return;
     }
     openAuthModal();
