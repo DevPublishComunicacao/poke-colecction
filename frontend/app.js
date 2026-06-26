@@ -146,6 +146,56 @@ async function saveAllPrefs() {
   await savePrefsServer();
 }
 
+async function applyServerPrefs() {
+  if (!isLoggedIn()) return;
+  try {
+    const resp = await fetch('/api/user/preferences', { headers: authHeaders() });
+    if (!resp.ok) return;
+    const p = await resp.json();
+    if (!p) return;
+
+    const c = colecoes.find(x => x.id === p.colecao_id);
+    if (!c) return;
+
+    // Auto-select colecao
+    selectedColecao = c;
+    document.getElementById('colecaoSelectedValue').textContent = c.name;
+    document.getElementById('colecaoSelectedValue').dataset.val = c.id;
+    const coMenu = document.getElementById('colecaoMenu');
+    if (coMenu) {
+      coMenu.querySelectorAll('.dropdown-item').forEach(el => el.classList.toggle('selected', el.dataset.value === String(c.id)));
+    }
+
+    await loadExpansoes();
+    const e = expansoes.find(x => x.id === p.expansao_id);
+    if (!e) { updateHeaderInfo(); renderCards(); return; }
+
+    // Auto-select expansao
+    selectedExpansao = e;
+    document.getElementById('expansaoSelectedValue').textContent = e.name;
+    document.getElementById('expansaoSelectedValue').dataset.val = e.id;
+    const exMenu = document.getElementById('expansaoMenu');
+    if (exMenu) {
+      exMenu.querySelectorAll('.dropdown-item').forEach(el => el.classList.toggle('selected', el.dataset.value === String(e.id)));
+    }
+
+    await loadPaises();
+    const pa = paises.find(x => x.id === p.pais_id);
+    if (!pa) { updateHeaderInfo(); renderCards(); return; }
+
+    // Auto-select pais
+    selectedPais = pa;
+    document.getElementById('paisSelectedValue').textContent = pa.name;
+    document.getElementById('paisSelectedValue').dataset.val = pa.id;
+    const paMenu = document.getElementById('paisMenu');
+    if (paMenu) {
+      paMenu.querySelectorAll('.dropdown-item').forEach(el => el.classList.toggle('selected', el.dataset.value === String(pa.id)));
+    }
+
+    await loadCards();
+  } catch (e) {}
+}
+
 async function restorePrefs() {
   // Try server first if logged in, then localStorage
   if (isLoggedIn()) {
@@ -693,12 +743,8 @@ function initAuth() {
       document.getElementById('authPassword').value = '';
       document.getElementById('authName').value = '';
 
-      // Save current prefs to server
-      await saveAllPrefs();
-      if (selectedExpansao && selectedPais) {
-        await fetchAndCacheUserData();
-        renderCards();
-      }
+      // Load user prefs from server after login
+      await applyServerPrefs();
     } catch (e) {
       errorEl.textContent = 'Erro de conexão';
     }
