@@ -1646,9 +1646,13 @@ body {
 }
 
 .admin-submenu {
-    display: flex;
+    display: none;
     flex-direction: column;
     border-top: 1px solid var(--border-color);
+}
+
+.admin-submenu.open {
+    display: flex;
 }
 
 .admin-submenu-item {

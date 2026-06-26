@@ -732,6 +732,15 @@ function initAuth() {
     localStorage.setItem('admin_menu_visible', _adminOpen ? '1' : '');
   });
 
+  document.querySelectorAll('.admin-menu-header').forEach(header => {
+    header.addEventListener('click', () => {
+      const submenu = header.nextElementSibling;
+      if (submenu && submenu.classList.contains('admin-submenu')) {
+        submenu.classList.toggle('open');
+      }
+    });
+  });
+
   document.querySelectorAll('.admin-submenu-item').forEach(btn => {
     btn.addEventListener('click', () => {
       const action = btn.dataset.action;
