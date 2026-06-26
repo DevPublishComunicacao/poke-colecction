@@ -625,7 +625,7 @@ function initAuth() {
     _authToken = stored;
     try {
       const payload = JSON.parse(atob(stored.split('.')[1]));
-      _authUser = { id: payload.userId, username: payload.username };
+      _authUser = { id: payload.userId, username: payload.username, name: payload.name || '' };
     } catch (e) { clearAuth(); }
   }
   updateUserUI();
