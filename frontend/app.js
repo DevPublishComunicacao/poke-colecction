@@ -539,8 +539,9 @@ function initColecaoDropdown() {
     await onColecaoSelect(colecao);
   });
 
-  // Close dropdowns on outside click
-  document.addEventListener('click', () => {
+  // Close dropdowns only when clicking outside any dropdown
+  document.addEventListener('click', (e) => {
+    if (e.target.closest('.custom-dropdown')) return;
     document.querySelectorAll('.custom-dropdown').forEach(d => {
       d.classList.remove('active');
       const t = d.querySelector('.dropdown-trigger');
@@ -594,9 +595,8 @@ document.addEventListener('click', async (e) => {
   if (expTrig) {
     e.stopPropagation();
     const dd = document.getElementById('expansaoDropdown');
-    const isOpen = dd.classList.contains('active');
     dd.classList.toggle('active');
-    expTrig.setAttribute('aria-expanded', !isOpen);
+    expTrig.setAttribute('aria-expanded', dd.classList.contains('active'));
     document.querySelectorAll('.custom-dropdown').forEach(d => {
       if (d !== dd) d.classList.remove('active');
     });
@@ -607,9 +607,8 @@ document.addEventListener('click', async (e) => {
   if (paisTrig) {
     e.stopPropagation();
     const dd = document.getElementById('paisDropdown');
-    const isOpen = dd.classList.contains('active');
     dd.classList.toggle('active');
-    paisTrig.setAttribute('aria-expanded', !isOpen);
+    paisTrig.setAttribute('aria-expanded', dd.classList.contains('active'));
     document.querySelectorAll('.custom-dropdown').forEach(d => {
       if (d !== dd) d.classList.remove('active');
     });
