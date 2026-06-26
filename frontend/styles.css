@@ -1519,14 +1519,14 @@ body {
     .modal-content {
         padding: 0;
     }
-.hidden {
-    display: none !important;
-}
-
-.cascade-selectors {
+    .cascade-selectors {
         flex-direction: column;
         gap: 16px;
     }
+}
+
+.hidden {
+    display: none !important;
 }
 
 /* Loading Overlay */
