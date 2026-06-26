@@ -176,6 +176,27 @@ module.exports = function (app) {
     } catch (e) { res.status(500).json({ error: e.message }); }
   });
 
+  // --- Admin: create expansion ---
+  app.post('/api/admin/expansoes', authRequired, async (req, res) => {
+    try {
+      const db = getDb();
+      const { name, colecao_id, year, description, pais_id, copy_cards_from_expansao_id } = req.body;
+      if (!name || !colecao_id || !pais_id) return res.status(400).json({ error: 'name, colecao_id, pais_id required' });
+      const result = await db.run(`INSERT INTO ${T('expansoes')} (name, colecao_id, year, description) VALUES ($1, $2, $3, $4) RETURNING id`,
+        [name, colecao_id, year || new Date().getFullYear(), description || '']);
+      const newId = result.id || result.lastID || result.insertId;
+      // Optionally copy cards from another expansion+pais
+      if (copy_cards_from_expansao_id) {
+        const cards = await db.all(`SELECT * FROM ${T('cards')} WHERE expansao_id = $1 AND pais_id = $2`, [copy_cards_from_expansao_id, pais_id]);
+        for (const c of cards) {
+          await db.run(`INSERT INTO ${T('cards')} (id, expansao_id, pais_id, name, number, total, image, type, hp, rarity, stage, weakness, resistance, retreat, attacks, sort_order) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)`,
+            [c.id, newId, pais_id, c.name, c.number, c.total, c.image, c.type, c.hp, c.rarity, c.stage, c.weakness, c.resistance, c.retreat, c.attacks, c.sort_order]);
+        }
+      }
+      res.json({ ok: true, id: newId });
+    } catch (e) { res.status(500).json({ error: e.message }); }
+  });
+
   // --- Admin: countries ---
   app.get('/api/admin/paises', authRequired, async (req, res) => {
     try {
