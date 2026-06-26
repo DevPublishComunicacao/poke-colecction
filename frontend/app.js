@@ -721,10 +721,26 @@ function initAuth() {
     const selectors = document.querySelector('.cascade-selectors');
     const highlight = document.getElementById('collectionHighlight');
     const adminMenu = document.getElementById('adminMenu');
+    const container = document.getElementById('cardsDisplayContainer');
+    const gridHeader = container ? container.querySelector('.grid-header') : null;
+    const cardsGrid = document.getElementById('cardsGrid');
     if (selectors) selectors.style.display = show ? 'none' : '';
     if (highlight) highlight.style.display = show ? 'none' : '';
     if (adminMenu) adminMenu.style.display = show ? 'flex' : 'none';
-    _adminOpen = show;
+    if (!show) {
+      // Restore cards view
+      if (gridHeader) gridHeader.style.display = '';
+      if (cardsGrid) {
+        if (currentCards.length > 0) {
+          renderCards();
+        } else {
+          cardsGrid.innerHTML = '<div class="empty-state"><i class="fa-regular fa-folder-open"></i><p>Selecione uma coleção, expansão e país para ver as cartas</p></div>';
+        }
+      }
+      _adminOpen = false;
+    } else {
+      _adminOpen = true;
+    }
   }
 
   const gearBtn = document.getElementById('userGearBtn');
@@ -746,31 +762,27 @@ function initAuth() {
     });
   });
 
-  function openAdminModal(title, columns, rows) {
-    const modal = document.getElementById('adminModal');
-    const titleEl = document.getElementById('adminModalTitle');
-    const thead = document.getElementById('adminTableHead');
-    const tbody = document.getElementById('adminTableBody');
-    titleEl.textContent = title;
-    thead.innerHTML = columns.map(c => `<th>${c.label}</th>`).join('');
-    tbody.innerHTML = rows.map(row =>
-      `<tr>${columns.map(c => `<td>${c.render ? c.render(row) : row[c.key] || '—'}</td>`).join('')}</tr>`
-    ).join('');
-    modal.classList.add('active');
-    modal.setAttribute('aria-hidden', 'false');
-  }
-
-  document.getElementById('adminModalClose').addEventListener('click', () => {
-    document.getElementById('adminModal').classList.remove('active');
-    document.getElementById('adminModal').setAttribute('aria-hidden', 'true');
-  });
-
-  document.getElementById('adminModal').addEventListener('mousedown', (e) => {
-    if (e.target === e.currentTarget) {
-      document.getElementById('adminModal').classList.remove('active');
-      document.getElementById('adminModal').setAttribute('aria-hidden', 'true');
+  function renderAdminTable(title, columns, rows) {
+    const container = document.getElementById('cardsDisplayContainer');
+    const gridHeader = container.querySelector('.grid-header');
+    const cardsGrid = document.getElementById('cardsGrid');
+    if (gridHeader) gridHeader.style.display = 'none';
+    if (cardsGrid) {
+      cardsGrid.innerHTML = `
+        <div class="admin-content">
+          <h2 class="admin-content-title">${title}</h2>
+          <div class="admin-table-wrap">
+            <table class="admin-table">
+              <thead><tr>${columns.map(c => `<th>${c.label}</th>`).join('')}</tr></thead>
+              <tbody>${rows.map(row =>
+                `<tr>${columns.map(c => `<td>${c.render ? c.render(row) : row[c.key] || '—'}</td>`).join('')}</tr>`
+              ).join('')}</tbody>
+            </table>
+          </div>
+        </div>
+      `;
     }
-  });
+  }
 
   document.querySelectorAll('.admin-submenu-item').forEach(btn => {
     btn.addEventListener('click', async () => {
@@ -780,7 +792,7 @@ function initAuth() {
           const resp = await fetch('/api/admin/paises', { headers: authHeaders() });
           if (!resp.ok) return;
           const paises = await resp.json();
-          openAdminModal('Países', [
+          renderAdminTable('Países', [
             { key: 'name', label: 'PAÍS' },
             { key: 'continent', label: 'CONTINENTE' },
             { key: 'language', label: 'LÍNGUA' },

@@ -1686,20 +1686,17 @@ body {
     border-bottom: 1px solid var(--border-color);
 }
 
-/* Admin Modal */
-.admin-modal-content {
-    max-width: 800px;
+/* Admin Content */
+.admin-content {
+    padding: 24px 0;
 }
 
-.admin-modal-body {
-    padding: 32px;
-}
-
-.admin-modal-body h2 {
+.admin-content-title {
     font-family: 'Outfit', sans-serif;
-    font-size: 24px;
+    font-size: 20px;
+    font-weight: 700;
     color: var(--text-primary);
-    margin: 0 0 24px;
+    margin: 0 0 20px;
 }
 
 .admin-table-wrap {
