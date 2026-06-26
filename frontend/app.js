@@ -721,17 +721,21 @@ function initAuth() {
     const selectors = document.querySelector('.cascade-selectors');
     const highlight = document.getElementById('collectionHighlight');
     const adminMenu = document.getElementById('adminMenu');
-    document.body.classList.toggle('admin-mode', show);
-    if (selectors) selectors.classList.toggle('hidden', show);
-    if (highlight) highlight.classList.toggle('hidden', show);
-    if (adminMenu) adminMenu.classList.toggle('open', show);
+    if (selectors) selectors.style.display = show ? 'none' : '';
+    if (highlight) highlight.style.display = show ? 'none' : '';
+    if (adminMenu) adminMenu.style.display = show ? 'flex' : 'none';
     _adminOpen = show;
   }
 
-  document.getElementById('userGearBtn').addEventListener('click', () => {
-    setAdminMenuVisible(!_adminOpen);
-    localStorage.setItem('admin_menu_visible', !_adminOpen ? '1' : '');
-  });
+  const gearBtn = document.getElementById('userGearBtn');
+  if (gearBtn) {
+    gearBtn.addEventListener('click', function onClick() {
+      const adminMenu = document.getElementById('adminMenu');
+      const isOpen = adminMenu && adminMenu.style.display === 'flex';
+      setAdminMenuVisible(!isOpen);
+      localStorage.setItem('admin_menu_visible', !isOpen ? '1' : '');
+    });
+  }
 
   document.querySelectorAll('.admin-menu-header').forEach(header => {
     header.addEventListener('click', () => {
