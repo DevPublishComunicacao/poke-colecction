@@ -286,8 +286,9 @@ async function resetAllDropdowns() {
   }
   document.getElementById('expansaoMenu').innerHTML = '<li class="dropdown-item selected" data-value="" role="option">Selecione...</li>';
   document.getElementById('paisMenu').innerHTML = '<li class="dropdown-item selected" data-value="" role="option">Selecione...</li>';
-  document.getElementById('colName').textContent = '';
-  document.getElementById('colDesc').textContent = '';
+  document.getElementById('colColecao').textContent = '';
+  document.getElementById('colExpansao').textContent = '';
+  document.getElementById('colPaisAno').textContent = '';
   document.getElementById('statTotal').textContent = '0';
   const grid = document.getElementById('cardsGrid');
   if (grid) grid.innerHTML = '<div class="empty-state"><i class="fa-regular fa-folder-open"></i><p>Selecione uma coleção, expansão e país para ver as cartas</p></div>';
@@ -448,23 +449,26 @@ async function loadCards() {
 
 // --- Header ---
 function updateHeaderInfo() {
-  const nameEl = document.getElementById('colName');
-  const descEl = document.getElementById('colDesc');
+  const colecaoEl = document.getElementById('colColecao');
+  const expansaoEl = document.getElementById('colExpansao');
+  const paisAnoEl = document.getElementById('colPaisAno');
   const totalEl = document.getElementById('statTotal');
+  if (!colecaoEl) return;
 
   if (selectedColecao && selectedExpansao) {
-    const nameParts = [selectedColecao.name];
-    if (selectedPais) nameParts.push('(' + selectedPais.name + ')');
-    nameEl.textContent = selectedExpansao.name;
-    descEl.textContent = selectedExpansao.description || selectedColecao.name + (selectedPais ? ' - ' + selectedPais.name : '');
+    colecaoEl.textContent = selectedColecao.name;
+    expansaoEl.textContent = selectedExpansao.name;
+    paisAnoEl.textContent = '(' + (selectedPais ? selectedPais.name + ' — ' : '') + (selectedExpansao.year || '') + ')';
     totalEl.textContent = currentCards.length;
   } else if (selectedColecao) {
-    nameEl.textContent = selectedColecao.name;
-    descEl.textContent = '';
+    colecaoEl.textContent = selectedColecao.name;
+    expansaoEl.textContent = '';
+    paisAnoEl.textContent = '';
     totalEl.textContent = '0';
   } else {
-    nameEl.textContent = 'Carregando...';
-    descEl.textContent = '';
+    colecaoEl.textContent = '';
+    expansaoEl.textContent = '';
+    paisAnoEl.textContent = '';
     totalEl.textContent = '0';
   }
 }
