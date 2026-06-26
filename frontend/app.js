@@ -717,8 +717,10 @@ function initAuth() {
   });
 
   document.getElementById('userGearBtn').addEventListener('click', () => {
-    // placeholder — futura tela de admin/config
-    alert('Configurações (em breve)');
+    const selectors = document.querySelector('.cascade-selectors');
+    const highlight = document.getElementById('collectionHighlight');
+    if (selectors) selectors.style.display = selectors.style.display === 'none' ? '' : 'none';
+    if (highlight) highlight.style.display = highlight.style.display === 'none' ? '' : 'none';
   });
 
   document.getElementById('authModalClose').addEventListener('click', closeAuthModal);
