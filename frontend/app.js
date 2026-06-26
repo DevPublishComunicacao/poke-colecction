@@ -721,15 +721,17 @@ function initAuth() {
     const selectors = document.querySelector('.cascade-selectors');
     const highlight = document.getElementById('collectionHighlight');
     const adminMenu = document.getElementById('adminMenu');
-    if (selectors) selectors.style.display = show ? 'none' : '';
-    if (highlight) highlight.style.display = show ? 'none' : '';
-    if (adminMenu) adminMenu.style.display = show ? '' : 'none';
+    if (selectors) selectors.style.setProperty('display', show ? 'none' : '', 'important');
+    if (highlight) highlight.style.setProperty('display', show ? 'none' : '', 'important');
+    if (adminMenu) adminMenu.style.setProperty('display', show ? 'flex' : 'none', 'important');
+    _adminOpen = show;
   }
 
   document.getElementById('userGearBtn').addEventListener('click', () => {
-    _adminOpen = !_adminOpen;
-    setAdminMenuVisible(_adminOpen);
-    localStorage.setItem('admin_menu_visible', _adminOpen ? '1' : '');
+    const adminMenu = document.getElementById('adminMenu');
+    const currentlyHidden = adminMenu && adminMenu.style.getPropertyValue('display') === 'none';
+    setAdminMenuVisible(currentlyHidden);
+    localStorage.setItem('admin_menu_visible', currentlyHidden ? '1' : '');
   });
 
   document.querySelectorAll('.admin-menu-header').forEach(header => {
@@ -1430,8 +1432,7 @@ modalCard3D.addEventListener("mouseleave", () => {
 function restoreAdminMenuState() {
   const gearBtn = document.getElementById('userGearBtn');
   const wasVisible = localStorage.getItem('admin_menu_visible') === '1';
-  if (wasVisible && gearBtn && gearBtn.style.display !== 'none') {
-    _adminOpen = true;
+  if (wasVisible && gearBtn && gearBtn.style.getPropertyValue('display') !== 'none') {
     setAdminMenuVisible(true);
   }
 }
