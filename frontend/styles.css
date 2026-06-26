@@ -1613,22 +1613,23 @@ body {
 /* Admin Menu */
 .admin-menu {
     display: flex;
-    gap: 12px;
+    flex-direction: column;
+    gap: 6px;
     padding: 16px 0;
-    flex-wrap: wrap;
 }
 
 .admin-menu-item {
     background: var(--card-bg);
     border: 1px solid var(--border-color);
     color: var(--text-primary);
-    padding: 12px 24px;
+    padding: 14px 24px;
     border-radius: 8px;
     cursor: pointer;
     font-family: 'Outfit', sans-serif;
     font-size: 14px;
     font-weight: 600;
     letter-spacing: 0.5px;
+    text-align: left;
     transition: all 0.2s;
 }
 
