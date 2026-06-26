@@ -6,6 +6,7 @@ const crypto = require('crypto');
 
 const { initDatabase } = require('./db');
 const { seedDatabase } = require('./seed');
+const { seedPerfectOrder } = require('./seed-perfect-order');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -48,6 +49,7 @@ async function main() {
   global.__db = database;
   app.locals.db = database;
   await seedDatabase(database);
+  await seedPerfectOrder(database).catch(e => console.error('Perfect Order seed:', e.message));
   app.listen(PORT, '0.0.0.0', () => {
     console.log('PokéCollection server running on http://localhost:' + PORT + ' (PostgreSQL)');
   });
