@@ -452,6 +452,7 @@ function updateHeaderInfo() {
   const colecaoEl = document.getElementById('colColecao');
   const expansaoEl = document.getElementById('colExpansao');
   const paisAnoEl = document.getElementById('colPaisAno');
+  const descEl = document.getElementById('colDesc');
   const totalEl = document.getElementById('statTotal');
   if (!colecaoEl) return;
 
@@ -459,16 +460,19 @@ function updateHeaderInfo() {
     colecaoEl.textContent = selectedColecao.name;
     expansaoEl.textContent = selectedExpansao.name;
     paisAnoEl.textContent = '(' + (selectedPais ? selectedPais.name + ' — ' : '') + (selectedExpansao.year || '') + ')';
+    descEl.textContent = selectedExpansao.description || '';
     totalEl.textContent = currentCards.length;
   } else if (selectedColecao) {
     colecaoEl.textContent = selectedColecao.name;
     expansaoEl.textContent = '';
     paisAnoEl.textContent = '';
+    descEl.textContent = '';
     totalEl.textContent = '0';
   } else {
     colecaoEl.textContent = '';
     expansaoEl.textContent = '';
     paisAnoEl.textContent = '';
+    descEl.textContent = '';
     totalEl.textContent = '0';
   }
 }

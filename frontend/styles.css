@@ -267,6 +267,14 @@ body {
     padding: 0;
 }
 
+.col-desc {
+    font-size: 12px;
+    color: var(--text-secondary);
+    line-height: 1.3;
+    margin: 6px 0 0 0;
+    padding: 0;
+}
+
 .col-meta {
     display: flex;
     gap: 8px;
