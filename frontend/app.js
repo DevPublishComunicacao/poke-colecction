@@ -700,7 +700,7 @@ function initAuth() {
   if (stored) {
     _authToken = stored;
     try {
-      const payload = JSON.parse(atob(stored.split('.')[1]));
+      const payload = JSON.parse(new TextDecoder().decode(Uint8Array.from(atob(stored.split('.')[1]), c => c.charCodeAt(0))));
       _authUser = { id: payload.userId, username: payload.username, name: payload.name || '' };
     } catch (e) { clearAuth(); }
   }
