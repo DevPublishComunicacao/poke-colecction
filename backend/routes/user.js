@@ -176,6 +176,24 @@ module.exports = function (app) {
     } catch (e) { res.status(500).json({ error: e.message }); }
   });
 
+  // --- Admin: update expansion ---
+  app.patch('/api/admin/expansoes/:id', authRequired, async (req, res) => {
+    try {
+      const db = getDb();
+      const { id } = req.params;
+      const { name, year, description } = req.body;
+      const sets = [];
+      const vals = [];
+      if (name != null) { sets.push('name = $' + (sets.length + 1)); vals.push(name); }
+      if (year != null) { sets.push('year = $' + (sets.length + 1)); vals.push(year); }
+      if (description != null) { sets.push('description = $' + (sets.length + 1)); vals.push(description); }
+      if (sets.length === 0) return res.status(400).json({ error: 'Nothing to update' });
+      vals.push(id);
+      await db.run(`UPDATE ${T('expansoes')} SET ${sets.join(', ')} WHERE id = $${vals.length}`, vals);
+      res.json({ ok: true });
+    } catch (e) { res.status(500).json({ error: e.message }); }
+  });
+
   // --- Admin: delete expansion ---
   app.delete('/api/admin/expansoes/:id', authRequired, async (req, res) => {
     try {
