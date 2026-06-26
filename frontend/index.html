@@ -85,10 +85,34 @@
             </section>
 
             <nav class="admin-menu" id="adminMenu" style="display:none">
-                <button class="admin-menu-item" data-section="colecoes">COLEÇÕES</button>
-                <button class="admin-menu-item" data-section="expansoes">EXPANÇÕES</button>
-                <button class="admin-menu-item" data-section="paises">PAÍSES</button>
-                <button class="admin-menu-item" data-section="usuarios">USUÁRIOS</button>
+                <div class="admin-menu-item" data-section="colecoes">
+                    <button class="admin-menu-header">COLEÇÕES</button>
+                    <div class="admin-submenu">
+                        <button class="admin-submenu-item" data-action="view-colecoes">VER TODAS AS COLEÇÕES</button>
+                        <button class="admin-submenu-item" data-action="create-colecao">CADASTRAR COLEÇÃO</button>
+                    </div>
+                </div>
+                <div class="admin-menu-item" data-section="expansoes">
+                    <button class="admin-menu-header">EXPANÇÕES</button>
+                    <div class="admin-submenu">
+                        <button class="admin-submenu-item" data-action="view-expansoes">VER TODAS AS EXPANÇÕES</button>
+                        <button class="admin-submenu-item" data-action="create-expansao">CADASTRAR EXPANSÃO</button>
+                    </div>
+                </div>
+                <div class="admin-menu-item" data-section="paises">
+                    <button class="admin-menu-header">PAÍSES</button>
+                    <div class="admin-submenu">
+                        <button class="admin-submenu-item" data-action="view-paises">VER TODOS OS PAÍSES</button>
+                        <button class="admin-submenu-item" data-action="create-pais">CADASTRAR PAÍS</button>
+                    </div>
+                </div>
+                <div class="admin-menu-item" data-section="usuarios">
+                    <button class="admin-menu-header">USUÁRIOS</button>
+                    <div class="admin-submenu">
+                        <button class="admin-submenu-item" data-action="view-usuarios">VER TODOS OS USUÁRIOS</button>
+                        <button class="admin-submenu-item" data-action="create-usuario">CADASTRAR USUÁRIO</button>
+                    </div>
+                </div>
             </nav>
         </header>
 

@@ -732,6 +732,14 @@ function initAuth() {
     localStorage.setItem('admin_menu_visible', _adminOpen ? '1' : '');
   });
 
+  document.querySelectorAll('.admin-submenu-item').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const action = btn.dataset.action;
+      // placeholder para futuras telas
+      console.log('Admin action:', action);
+    });
+  });
+
   document.getElementById('authModalClose').addEventListener('click', closeAuthModal);
   document.getElementById('authModal').addEventListener('mousedown', (e) => {
     if (e.target === e.currentTarget) closeAuthModal();
