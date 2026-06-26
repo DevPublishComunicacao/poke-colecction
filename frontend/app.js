@@ -719,8 +719,11 @@ function initAuth() {
   document.getElementById('userGearBtn').addEventListener('click', () => {
     const selectors = document.querySelector('.cascade-selectors');
     const highlight = document.getElementById('collectionHighlight');
-    if (selectors) selectors.style.display = selectors.style.display === 'none' ? '' : 'none';
-    if (highlight) highlight.style.display = highlight.style.display === 'none' ? '' : 'none';
+    const adminMenu = document.getElementById('adminMenu');
+    const isHidden = selectors && selectors.style.display === 'none';
+    if (selectors) selectors.style.display = isHidden ? '' : 'none';
+    if (highlight) highlight.style.display = isHidden ? '' : 'none';
+    if (adminMenu) adminMenu.style.display = isHidden ? 'none' : '';
   });
 
   document.getElementById('authModalClose').addEventListener('click', closeAuthModal);
