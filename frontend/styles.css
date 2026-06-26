@@ -1688,7 +1688,9 @@ body {
 
 /* Admin Content */
 .admin-content {
-    padding: 32px 0;
+    grid-column: 1 / -1;
+    width: 100%;
+    padding: 0;
 }
 
 .admin-content-title {
@@ -1696,7 +1698,7 @@ body {
     font-size: 26px;
     font-weight: 700;
     color: var(--text-primary);
-    margin: 0 0 28px;
+    margin: 0 0 24px;
 }
 
 .admin-table-wrap {
