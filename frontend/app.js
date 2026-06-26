@@ -289,6 +289,7 @@ async function resetAllDropdowns() {
   document.getElementById('colColecao').textContent = '';
   document.getElementById('colExpansao').textContent = '';
   document.getElementById('colPaisAno').textContent = '';
+  document.getElementById('colDesc').textContent = '';
   document.getElementById('statTotal').textContent = '0';
   const grid = document.getElementById('cardsGrid');
   if (grid) grid.innerHTML = '<div class="empty-state"><i class="fa-regular fa-folder-open"></i><p>Selecione uma coleção, expansão e país para ver as cartas</p></div>';
