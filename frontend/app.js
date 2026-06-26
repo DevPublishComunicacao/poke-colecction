@@ -27,6 +27,7 @@ function clearAuth() {
   _authUser = null;
   localStorage.removeItem('auth_token');
   localStorage.removeItem('remembered_password');
+  updateUserUI();
 }
 
 function authHeaders() {
@@ -704,7 +705,6 @@ function initAuth() {
       clearAuth();
       _stockCache = {};
       _acquiredCache = [];
-      updateUserUI();
       resetAllDropdowns();
       return;
     }
