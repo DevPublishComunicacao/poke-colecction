@@ -176,6 +176,23 @@ module.exports = function (app) {
     } catch (e) { res.status(500).json({ error: e.message }); }
   });
 
+  // --- Admin: delete expansion ---
+  app.delete('/api/admin/expansoes/:id', authRequired, async (req, res) => {
+    try {
+      const db = getDb();
+      const { id } = req.params;
+      const txFn = db.transaction(async (tx) => {
+        await tx.run(`DELETE FROM ${T('cards')} WHERE expansao_id = $1`, [id]);
+        await tx.run(`DELETE FROM ${T('user_stock')} WHERE expansao_id = $1`, [id]);
+        await tx.run(`DELETE FROM ${T('user_acquired')} WHERE expansao_id = $1`, [id]);
+        await tx.run(`DELETE FROM ${T('user_preferences')} WHERE expansao_id = $1`, [id]);
+        await tx.run(`DELETE FROM ${T('expansoes')} WHERE id = $1`, [id]);
+      });
+      await txFn();
+      res.json({ ok: true });
+    } catch (e) { res.status(500).json({ error: e.message }); }
+  });
+
   // --- Admin: create expansion ---
   app.post('/api/admin/expansoes', authRequired, async (req, res) => {
     try {
