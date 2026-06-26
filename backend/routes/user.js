@@ -176,6 +176,15 @@ module.exports = function (app) {
     } catch (e) { res.status(500).json({ error: e.message }); }
   });
 
+  // --- Admin: countries ---
+  app.get('/api/admin/paises', authRequired, async (req, res) => {
+    try {
+      const db = getDb();
+      const rows = await db.all(`SELECT id, name, continent, language FROM ${T('paises')} ORDER BY id`);
+      res.json(rows);
+    } catch (e) { res.status(500).json({ error: e.message }); }
+  });
+
   // --- Users list ---
   app.get('/api/users', authRequired, async (req, res) => {
     try {

@@ -1686,6 +1686,80 @@ body {
     border-bottom: 1px solid var(--border-color);
 }
 
+/* Admin Modal */
+.admin-modal-content {
+    max-width: 800px;
+}
+
+.admin-modal-body {
+    padding: 32px;
+}
+
+.admin-modal-body h2 {
+    font-family: 'Outfit', sans-serif;
+    font-size: 24px;
+    color: var(--text-primary);
+    margin: 0 0 24px;
+}
+
+.admin-table-wrap {
+    overflow-x: auto;
+}
+
+.admin-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: 'Outfit', sans-serif;
+    font-size: 14px;
+}
+
+.admin-table th {
+    text-align: left;
+    padding: 12px 16px;
+    color: var(--text-secondary);
+    font-weight: 600;
+    font-size: 12px;
+    letter-spacing: 0.5px;
+    border-bottom: 1px solid var(--border-color);
+    text-transform: uppercase;
+}
+
+.admin-table td {
+    padding: 12px 16px;
+    color: var(--text-primary);
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+}
+
+.admin-table tbody tr:hover {
+    background: rgba(255,255,255,0.03);
+}
+
+.admin-table-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.admin-table-actions button {
+    background: none;
+    border: 1px solid var(--border-color);
+    color: var(--text-secondary);
+    width: 32px;
+    height: 32px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+}
+
+.admin-table-actions button:hover {
+    color: var(--accent-gold);
+    border-color: var(--accent-gold);
+    background: rgba(255,255,255,0.05);
+}
+
 /* Auth Modal */
 .auth-modal-content {
     max-width: 400px !important;

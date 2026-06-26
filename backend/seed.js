@@ -127,8 +127,8 @@ async function seedDatabase(db) {
     await tx.run(`INSERT INTO ${T('colecoes')} (id, name) VALUES ($1, $2)`, [COLEAO_ID, 'Megaevoluções']);
     await tx.run(`INSERT INTO ${T('expansoes')} (id, name, colecao_id, year, description) VALUES ($1, $2, $3, $4, $5)`,
       [EXPANSAO_ID, 'Caos Ascendente', COLEAO_ID, 2026, 'Caos Ascendente apresenta novas Megaevoluções com ilustrações impressionantes de Kalos.']);
-    await tx.run(`INSERT INTO ${T('paises')} (id, name) VALUES ($1, $2)`, [PAIS_EUA, 'EUA (Inglês)']);
-    await tx.run(`INSERT INTO ${T('paises')} (id, name) VALUES ($1, $2)`, [PAIS_BRASIL, 'Brasil (Pt-BR)']);
+    await tx.run(`INSERT INTO ${T('paises')} (id, name, continent, language) VALUES ($1, $2, $3, $4)`, [PAIS_EUA, 'EUA (Inglês)', 'América do Norte', 'Inglês']);
+    await tx.run(`INSERT INTO ${T('paises')} (id, name, continent, language) VALUES ($1, $2, $3, $4)`, [PAIS_BRASIL, 'Brasil (Pt-BR)', 'América do Sul', 'Português']);
 
     for (let idx = 0; idx < enCards.length; idx++) {
       const c = enCards[idx];

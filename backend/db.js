@@ -40,6 +40,15 @@ async function createTables() {
       name TEXT UNIQUE NOT NULL
     )
   `);
+  // Add continent / language columns if missing
+  for (const col of ['continent', 'language']) {
+    try {
+      await pool.query(`ALTER TABLE ${T('paises')} ADD COLUMN ${col} TEXT NOT NULL DEFAULT ''`);
+    } catch (_) { /* column already exists */ }
+  }
+  // Fill existing rows
+  await pool.query(`UPDATE ${T('paises')} SET continent = 'América do Norte', language = 'Inglês' WHERE name = 'EUA (Inglês)' AND (continent IS NULL OR continent = '')`);
+  await pool.query(`UPDATE ${T('paises')} SET continent = 'América do Sul', language = 'Português' WHERE name = 'Brasil (Pt-BR)' AND (continent IS NULL OR continent = '')`);
   await pool.query(`
     CREATE TABLE IF NOT EXISTS ${T('users')} (
       id TEXT PRIMARY KEY,

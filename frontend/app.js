@@ -746,10 +746,54 @@ function initAuth() {
     });
   });
 
+  function openAdminModal(title, columns, rows) {
+    const modal = document.getElementById('adminModal');
+    const titleEl = document.getElementById('adminModalTitle');
+    const thead = document.getElementById('adminTableHead');
+    const tbody = document.getElementById('adminTableBody');
+    titleEl.textContent = title;
+    thead.innerHTML = columns.map(c => `<th>${c.label}</th>`).join('');
+    tbody.innerHTML = rows.map(row =>
+      `<tr>${columns.map(c => `<td>${c.render ? c.render(row) : row[c.key] || '—'}</td>`).join('')}</tr>`
+    ).join('');
+    modal.classList.add('active');
+    modal.setAttribute('aria-hidden', 'false');
+  }
+
+  document.getElementById('adminModalClose').addEventListener('click', () => {
+    document.getElementById('adminModal').classList.remove('active');
+    document.getElementById('adminModal').setAttribute('aria-hidden', 'true');
+  });
+
+  document.getElementById('adminModal').addEventListener('mousedown', (e) => {
+    if (e.target === e.currentTarget) {
+      document.getElementById('adminModal').classList.remove('active');
+      document.getElementById('adminModal').setAttribute('aria-hidden', 'true');
+    }
+  });
+
   document.querySelectorAll('.admin-submenu-item').forEach(btn => {
-    btn.addEventListener('click', () => {
+    btn.addEventListener('click', async () => {
       const action = btn.dataset.action;
-      // placeholder para futuras telas
+      if (action === 'view-paises') {
+        try {
+          const resp = await fetch('/api/admin/paises', { headers: authHeaders() });
+          if (!resp.ok) return;
+          const paises = await resp.json();
+          openAdminModal('Países', [
+            { key: 'name', label: 'PAÍS' },
+            { key: 'continent', label: 'CONTINENTE' },
+            { key: 'language', label: 'LÍNGUA' },
+            { label: 'OPÇÕES', render: () =>
+              '<div class="admin-table-actions">' +
+                '<button title="Visualizar"><i class="fa-solid fa-eye"></i></button>' +
+                '<button title="Editar"><i class="fa-solid fa-pen"></i></button>' +
+              '</div>'
+            }
+          ], paises);
+        } catch (_) {}
+        return;
+      }
       console.log('Admin action:', action);
     });
   });
