@@ -241,6 +241,7 @@ body {
     font-size: 20px;
     font-weight: 800;
     color: var(--accent-gold);
+    line-height: 1.15;
 }
 
 .col-expansao {
@@ -249,6 +250,7 @@ body {
     font-size: 28px;
     font-weight: 800;
     color: var(--text-primary);
+    line-height: 1.15;
 }
 
 .col-pais-ano {
@@ -256,6 +258,7 @@ body {
     font-size: 13px;
     font-weight: 500;
     color: var(--text-secondary);
+    line-height: 1.15;
 }
 
 .col-meta {
