@@ -1523,10 +1523,6 @@ body {
     display: none !important;
 }
 
-.admin-menu.open {
-    display: flex !important;
-}
-
 .cascade-selectors {
         flex-direction: column;
         gap: 16px;
@@ -1620,10 +1616,14 @@ body {
 
 /* Admin Menu */
 .admin-menu {
-    display: flex;
+    display: none;
     flex-direction: column;
     gap: 8px;
     padding: 16px 0;
+}
+
+.admin-menu.open {
+    display: flex;
 }
 
 .admin-menu-item {
