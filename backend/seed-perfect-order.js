@@ -45,36 +45,46 @@ function downloadImage(url, dest) {
   });
 }
 
-async function fetchSingleCard(lang, lid) {
-  const resp = await fetch(`https://api.tcgdex.net/v2/${lang}/cards/me03-${lid}`);
-  if (!resp.ok) return null;
-  const c = await resp.json();
-  const attacks = [];
-  if (c.abilities) {
-    for (const ab of c.abilities) {
-      attacks.push({ name: escapeJs(ab.name) + ' (Habilidade)', damage: '', desc: escapeJs(ab.effect) });
+async function fetchSingleCard(lang, lid, retries = 3) {
+  for (let attempt = 1; attempt <= retries; attempt++) {
+    try {
+      const resp = await fetch(`https://api.tcgdex.net/v2/${lang}/cards/me03-${lid}`);
+      if (!resp.ok) {
+        if (attempt < retries) { await new Promise(r => setTimeout(r, 1000 * attempt)); continue; }
+        return null;
+      }
+      const c = await resp.json();
+      const attacks = [];
+      if (c.abilities) {
+        for (const ab of c.abilities) {
+          attacks.push({ name: escapeJs(ab.name) + ' (Habilidade)', damage: '', desc: escapeJs(ab.effect) });
+        }
+      }
+      if (c.attacks) {
+        for (const at of c.attacks) {
+          attacks.push({ name: escapeJs(at.name), damage: at.damage || '', desc: escapeJs(at.effect || '—') });
+        }
+      }
+      return {
+        id: 'me03-' + lid,
+        name: c.name || '',
+        number: lid,
+        total: '88',
+        image: 'assets/me03' + (lang === 'pt' ? '-pt' : '') + '-' + lid + '.webp',
+        type: c.types && c.types.length > 0 ? c.types[0] : '—',
+        hp: c.hp != null ? String(c.hp) : '-',
+        rarity: c.rarity || 'Comum',
+        stage: c.stage || '—',
+        weakness: c.weaknesses && c.weaknesses[0] ? formatWeakness(c.weaknesses[0]) : 'Nenhuma',
+        resistance: c.resistances && c.resistances[0] ? formatResistance(c.resistances[0]) : 'Nenhuma',
+        retreat: c.retreat != null ? formatRetreat(c.retreat) : '0',
+        attacks
+      };
+    } catch (e) {
+      if (attempt < retries) { await new Promise(r => setTimeout(r, 1000 * attempt)); continue; }
+      return null;
     }
   }
-  if (c.attacks) {
-    for (const at of c.attacks) {
-      attacks.push({ name: escapeJs(at.name), damage: at.damage || '', desc: escapeJs(at.effect || '—') });
-    }
-  }
-  return {
-    id: 'me03-' + lid,
-    name: c.name || '',
-    number: lid,
-    total: '88',
-    image: 'assets/me03' + (lang === 'pt' ? '-pt' : '') + '-' + lid + '.webp',
-    type: c.types && c.types.length > 0 ? c.types[0] : '—',
-    hp: c.hp != null ? String(c.hp) : '-',
-    rarity: c.rarity || 'Comum',
-    stage: c.stage || '—',
-    weakness: c.weaknesses && c.weaknesses[0] ? formatWeakness(c.weaknesses[0]) : 'Nenhuma',
-    resistance: c.resistances && c.resistances[0] ? formatResistance(c.resistances[0]) : 'Nenhuma',
-    retreat: c.retreat != null ? formatRetreat(c.retreat) : '0',
-    attacks
-  };
 }
 
 async function downloadAllImages(lang, cards) {
