@@ -42,9 +42,9 @@ function updateUserUI() {
   if (!span) return;
   const isLogged = !!_authUser;
   span.textContent = isLogged ? (_authUser.name || _authUser.username) : 'Entrar';
-  const gear = document.getElementById('userGear');
-  if (gear) {
-    gear.style.display = isLogged && _authUser.username === 'dev.publishcomunicacao@gmail.com' ? '' : 'none';
+  const gearBtn = document.getElementById('userGearBtn');
+  if (gearBtn) {
+    gearBtn.style.display = isLogged && _authUser.username === 'dev.publishcomunicacao@gmail.com' ? '' : 'none';
   }
 }
 
@@ -714,6 +714,11 @@ function initAuth() {
       return;
     }
     openAuthModal();
+  });
+
+  document.getElementById('userGearBtn').addEventListener('click', () => {
+    // placeholder — futura tela de admin/config
+    alert('Configurações (em breve)');
   });
 
   document.getElementById('authModalClose').addEventListener('click', closeAuthModal);

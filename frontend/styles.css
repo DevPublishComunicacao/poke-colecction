@@ -1585,17 +1585,25 @@ body {
     border-color: var(--primary-color);
 }
 
-.user-gear {
-    font-size: 14px;
+.user-gear-btn {
+    background: transparent;
+    border: none;
     color: var(--text-secondary);
+    font-size: 16px;
+    padding: 8px;
+    border-radius: 8px;
+    cursor: pointer;
     opacity: 0.6;
     transition: opacity 0.2s, color 0.2s;
-    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
-.user-gear:hover {
+.user-gear-btn:hover {
     opacity: 1;
     color: var(--accent-gold);
+    background: rgba(255,255,255,0.05);
 }
 
 /* Auth Modal */
