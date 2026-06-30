@@ -1,11 +1,20 @@
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
+const rateLimit = require('express-rate-limit');
 const { T } = require('../db');
 
 function generateUserId() { return crypto.randomUUID(); }
 
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 20,
+  message: { error: 'Muitas tentativas. Tente novamente em 15 minutos.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
 module.exports = function (app) {
-  app.post('/api/auth/register', async (req, res) => {
+  app.post('/api/auth/register', authLimiter, async (req, res) => {
     try {
       const db = app.locals.db;
       const { username, password, name } = req.body;
@@ -26,7 +35,7 @@ module.exports = function (app) {
     } catch (e) { res.status(500).json({ error: e.message }); }
   });
 
-  app.post('/api/auth/login', async (req, res) => {
+  app.post('/api/auth/login', authLimiter, async (req, res) => {
     try {
       const db = app.locals.db;
       const { username, password } = req.body;

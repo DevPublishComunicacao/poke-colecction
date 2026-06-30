@@ -12,6 +12,7 @@ const PORT = process.env.PORT || 3000;
 
 const JWT_SECRET = process.env.JWT_SECRET || crypto.randomBytes(32).toString('hex');
 
+app.set('trust proxy', 1);
 app.use(express.json());
 app.use(express.static(path.join(__dirname, '..', 'frontend')));
 app.use('/assets', express.static(path.join(__dirname, '..', 'assets')));
