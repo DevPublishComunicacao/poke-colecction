@@ -20,7 +20,7 @@ module.exports = function (app) {
       const { username, password, name } = req.body;
       if (!username || !password) return res.status(400).json({ error: 'Username and password required' });
       if (username.length < 3) return res.status(400).json({ error: 'Username must have at least 3 characters' });
-      if (password.length < 4) return res.status(400).json({ error: 'Password must have at least 4 characters' });
+      if (password.length < 8) return res.status(400).json({ error: 'Password must have at least 8 characters' });
       const displayName = (name || '').trim();
       if (displayName && displayName.length < 3) return res.status(400).json({ error: 'Name must have at least 3 characters' });
       const existing = await db.get(`SELECT id FROM ${T('users')} WHERE username = $1`, [username]);
