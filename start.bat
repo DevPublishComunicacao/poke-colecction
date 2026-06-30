@@ -4,6 +4,21 @@ title PokéCollection
 set ROOT=%~dp0
 
 echo ==========================================
+echo  CONFIGURACAO
+echo ==========================================
+
+if not exist "%ROOT%.env" (
+    copy "%ROOT%.env.example" "%ROOT%.env" >nul
+    for /f "usebackq tokens=*" %%a in (`node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"`) do (
+        >>"%ROOT%.env" echo JWT_SECRET=%%a
+    )
+    echo  [OK] .env criado com JWT_SECRET permanente
+) else (
+    echo  [OK] .env ja existe
+)
+
+echo.
+echo ==========================================
 echo  INICIANDO BANCO DE DADOS (Docker)
 echo ==========================================
 
