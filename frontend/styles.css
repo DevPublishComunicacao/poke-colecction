@@ -1452,6 +1452,30 @@ body {
     font-size: 16px;
 }
 
+.login-prompt {
+    grid-column: 1 / -1;
+    text-align: center;
+    padding: 120px 20px;
+    color: var(--text-secondary);
+}
+
+.login-prompt i {
+    font-size: 64px;
+    margin-bottom: 20px;
+    opacity: 0.2;
+}
+
+.login-prompt h2 {
+    font-size: 24px;
+    margin-bottom: 12px;
+    color: var(--text-primary);
+}
+
+.login-prompt p {
+    font-size: 16px;
+    margin-bottom: 24px;
+}
+
 /* Responsive Rules */
 @media (max-width: 1024px) {
     .modal-overlay {

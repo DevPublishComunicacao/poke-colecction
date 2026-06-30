@@ -105,7 +105,7 @@ async function syncUserData() {
     if (resp.status === 401) {
       clearAuth();
       updateUserUI();
-      if (currentCards) renderCards();
+      showLoginPrompt();
     }
   } catch (e) {}
 }
@@ -419,7 +419,7 @@ async function onPaisSelect(pais) {
 // --- Data loading ---
 async function loadExpansoes() {
   if (!selectedColecao) return;
-  const resp = await fetch('/api/expansoes?colecao_id=' + selectedColecao.id);
+  const resp = await fetch('/api/expansoes?colecao_id=' + selectedColecao.id, { headers: authHeaders() });
   if (resp.ok) expansoes = await resp.json();
   else expansoes = [];
   const eMenu = document.getElementById('expansaoMenu');
@@ -433,7 +433,7 @@ async function loadExpansoes() {
 
 async function loadPaises() {
   if (!selectedExpansao) return;
-  const resp = await fetch('/api/paises?expansao_id=' + selectedExpansao.id);
+  const resp = await fetch('/api/paises?expansao_id=' + selectedExpansao.id, { headers: authHeaders() });
   if (resp.ok) paises = await resp.json();
   else paises = [];
   const pMenu = document.getElementById('paisMenu');
@@ -447,7 +447,7 @@ async function loadPaises() {
 
 async function loadCards() {
   if (!selectedExpansao || !selectedPais) { currentCards = []; renderCards(); return; }
-  const resp = await fetch('/api/cards?expansao_id=' + selectedExpansao.id + '&pais_id=' + selectedPais.id);
+  const resp = await fetch('/api/cards?expansao_id=' + selectedExpansao.id + '&pais_id=' + selectedPais.id, { headers: authHeaders() });
   if (resp.ok) currentCards = await resp.json();
   else currentCards = [];
   await fetchAndCacheUserData();
@@ -495,18 +495,28 @@ let filterStage = '';
 
 // --- Init ---
 async function initApp() {
+  const loader = document.getElementById('loadingOverlay');
+
+  if (!isLoggedIn()) {
+    if (loader) loader.style.display = 'none';
+    showLoginPrompt();
+    return;
+  }
+
   // Fetch colecoes
   try {
-    const resp = await fetch('/api/colecoes');
+    const resp = await fetch('/api/colecoes', { headers: authHeaders() });
+    if (!resp.ok) { showLoginPrompt(); return; }
     colecoes = await resp.json();
   } catch (e) { colecoes = []; }
 
   if (colecoes.length === 0) {
-    const loader = document.getElementById('loadingOverlay');
     if (loader) loader.style.display = 'none';
+    hideLoginPrompt();
     return;
   }
 
+  hideLoginPrompt();
   initColecaoDropdown();
 
   const colVal = document.getElementById('colecaoSelectedValue');
@@ -517,7 +527,6 @@ async function initApp() {
   const prefResult = await restorePrefs();
 
   if (selectedColecao) {
-    // Prefs found — auto-select everything
     colVal.textContent = selectedColecao.name;
     colVal.dataset.val = selectedColecao.id;
     highlightDropdownItem('colecaoMenu', selectedColecao.id);
@@ -557,7 +566,6 @@ async function initApp() {
     await loadCards();
     updateHeaderInfo();
   } else {
-    // No prefs — show placeholders
     colVal.textContent = 'Selecione...';
     colVal.dataset.val = '';
     expVal.textContent = 'Selecione...';
@@ -567,8 +575,25 @@ async function initApp() {
     updateHeaderInfo();
   }
 
-  const loader = document.getElementById('loadingOverlay');
   if (loader) loader.style.display = 'none';
+}
+
+function showLoginPrompt() {
+  const container = document.getElementById('cardsDisplayContainer');
+  if (!container) return;
+  container.innerHTML = `
+    <div class="login-prompt">
+      <i class="fa-solid fa-lock"></i>
+      <h2>Faça login para acessar o PokéCollection</h2>
+      <p>Você precisa estar logado para visualizar as coleções, expansões e cartas.</p>
+      <button class="auth-submit" onclick="openAuthModal()">Entrar / Registrar</button>
+    </div>
+  `;
+}
+
+function hideLoginPrompt() {
+  const prompt = document.querySelector('.login-prompt');
+  if (prompt) prompt.remove();
 }
 
 function highlightDropdownItem(menuId, value) {
@@ -715,7 +740,7 @@ function initAuth() {
       clearAuth();
       _stockCache = {};
       _acquiredCache = [];
-      resetAllDropdowns();
+      showLoginPrompt();
       return;
     }
     openAuthModal();
@@ -879,6 +904,7 @@ function initAuth() {
       setToken(data.token, data.user);
       updateUserUI();
       closeAuthModal();
+      initApp();
       if (document.getElementById('rememberMe').checked) {
         localStorage.setItem('remembered_email', username);
       } else {

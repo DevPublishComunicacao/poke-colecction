@@ -1,7 +1,19 @@
 const { T } = require('../db');
 
+function authRequired(req, res, next) {
+  const auth = req.headers['authorization'];
+  const token = auth && auth.startsWith('Bearer ') ? auth.slice(7) : null;
+  if (!token) return res.status(401).json({ error: 'Token required' });
+  try {
+    req.user = req.jwt.verify(token, req.jwtSecret);
+    next();
+  } catch (e) {
+    return res.status(401).json({ error: 'Invalid token' });
+  }
+}
+
 module.exports = function (app) {
-  app.get('/api/colecoes', async (req, res) => {
+  app.get('/api/colecoes', authRequired, async (req, res) => {
     try {
       const db = app.locals.db;
       const rows = await db.all(`SELECT * FROM ${T('colecoes')} ORDER BY id`);
@@ -9,7 +21,7 @@ module.exports = function (app) {
     } catch (e) { res.status(500).json({ error: e.message }); }
   });
 
-  app.get('/api/expansoes', async (req, res) => {
+  app.get('/api/expansoes', authRequired, async (req, res) => {
     try {
       const db = app.locals.db;
       const { colecao_id } = req.query;
@@ -22,7 +34,7 @@ module.exports = function (app) {
     } catch (e) { res.status(500).json({ error: e.message }); }
   });
 
-  app.get('/api/paises', async (req, res) => {
+  app.get('/api/paises', authRequired, async (req, res) => {
     try {
       const db = app.locals.db;
       const { expansao_id } = req.query;
@@ -36,7 +48,7 @@ module.exports = function (app) {
     } catch (e) { res.status(500).json({ error: e.message }); }
   });
 
-  app.get('/api/cards', async (req, res) => {
+  app.get('/api/cards', authRequired, async (req, res) => {
     try {
       const db = app.locals.db;
       const { expansao_id, pais_id } = req.query;
