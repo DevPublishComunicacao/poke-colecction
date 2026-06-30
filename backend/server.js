@@ -2,6 +2,8 @@ const express = require('express');
 const path = require('path');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
+const helmet = require('helmet');
+const cors = require('cors');
 
 const { initDatabase } = require('./db');
 const { seedDatabase } = require('./seed');
@@ -13,6 +15,8 @@ const PORT = process.env.PORT || 3000;
 const JWT_SECRET = process.env.JWT_SECRET || crypto.randomBytes(32).toString('hex');
 
 app.set('trust proxy', 1);
+app.use(helmet());
+app.use(cors({ origin: process.env.CORS_ORIGIN || true }));
 app.use(express.json());
 app.use(express.static(path.join(__dirname, '..', 'frontend')));
 app.use('/assets', express.static(path.join(__dirname, '..', 'assets')));
