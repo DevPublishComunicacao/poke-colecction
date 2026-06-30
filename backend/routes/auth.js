@@ -41,6 +41,33 @@ if (pwErrors.length) return res.status(400).json({ error: 'Senha deve ter: ' + p
     } catch (e) { res.status(500).json({ error: e.message }); }
   });
 
+  app.post('/api/auth/reset-admin', authLimiter, async (req, res) => {
+    try {
+      const db = app.locals.db;
+      const adminUsers = (process.env.ADMIN_USERNAME || '').split(',').map(u => u.trim().toLowerCase()).filter(Boolean);
+      if (adminUsers.length === 0) return res.status(400).json({ error: 'ADMIN_USERNAME not configured' });
+      const { password, username } = req.body;
+      const targetUser = (username || adminUsers[0]).toLowerCase();
+      if (!adminUsers.includes(targetUser)) return res.status(403).json({ error: 'User not authorized for reset' });
+      if (!password) return res.status(400).json({ error: 'Password required' });
+      const pwErrors = [];
+      if (password.length < 8) pwErrors.push('8+ caracteres');
+      if (!/[A-Z]/.test(password)) pwErrors.push('1 letra maiúscula');
+      if ((password.match(/[a-z]/g) || []).length < 3) pwErrors.push('3 letras minúsculas');
+      if (!/[^a-zA-Z0-9]/.test(password)) pwErrors.push('1 caractere especial');
+      if ((password.match(/\d/g) || []).length < 3) pwErrors.push('3 números');
+      if (pwErrors.length) return res.status(400).json({ error: 'Senha deve ter: ' + pwErrors.join(', ') });
+      const hash = bcrypt.hashSync(password, 10);
+      const user = await db.get(`SELECT * FROM ${T('users')} WHERE LOWER(username) = $1`, [targetUser]);
+      if (!user) return res.status(404).json({ error: 'User not found' });
+      await db.run(`UPDATE ${T('users')} SET password = $1 WHERE LOWER(username) = $2`, [hash, targetUser]);
+      if (!user.is_admin) {
+        await db.run(`UPDATE ${T('users')} SET is_admin = TRUE WHERE LOWER(username) = $1`, [targetUser]);
+      }
+      res.json({ ok: true, message: 'Senha redefinida com sucesso' });
+    } catch (e) { res.status(500).json({ error: e.message }); }
+  });
+
   app.post('/api/auth/login', authLimiter, async (req, res) => {
     try {
       const db = app.locals.db;
