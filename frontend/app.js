@@ -26,7 +26,6 @@ function clearAuth() {
   _authToken = null;
   _authUser = null;
   localStorage.removeItem('auth_token');
-  localStorage.removeItem('remembered_password');
   updateUserUI();
 }
 
@@ -44,7 +43,7 @@ function updateUserUI() {
   span.textContent = isLogged ? (_authUser.name || _authUser.username) : 'Entrar';
   const gearBtn = document.getElementById('userGearBtn');
   if (gearBtn) {
-    gearBtn.classList.toggle('hidden', !(isLogged && _authUser.username === 'dev.publishcomunicacao@gmail.com'));
+    gearBtn.classList.toggle('hidden', !(isLogged && _authUser.is_admin));
   }
 }
 
@@ -306,6 +305,8 @@ async function resetAllDropdowns() {
   if (bulkBar) bulkBar.remove();
   const indexBar = document.getElementById('cardIndexBar');
   if (indexBar) indexBar.remove();
+  const filterRow = document.getElementById('filterRow');
+  if (filterRow) filterRow.remove();
 }
 
 async function onColecaoClear() {
@@ -488,6 +489,9 @@ function updateHeaderInfo() {
 // --- State ---
 let searchFilter = '';
 let filterStatus = '';
+let filterType = '';
+let filterRarity = '';
+let filterStage = '';
 
 // --- Init ---
 async function initApp() {
@@ -701,7 +705,7 @@ function initAuth() {
     _authToken = stored;
     try {
       const payload = JSON.parse(new TextDecoder().decode(Uint8Array.from(atob(stored.split('.')[1]), c => c.charCodeAt(0))));
-      _authUser = { id: payload.userId, username: payload.username, name: payload.name || '' };
+      _authUser = { id: payload.userId, username: payload.username, name: payload.name || '', is_admin: payload.is_admin || false };
     } catch (e) { clearAuth(); }
   }
   updateUserUI();
@@ -877,10 +881,8 @@ function initAuth() {
       closeAuthModal();
       if (document.getElementById('rememberMe').checked) {
         localStorage.setItem('remembered_email', username);
-        localStorage.setItem('remembered_password', password);
       } else {
         localStorage.removeItem('remembered_email');
-        localStorage.removeItem('remembered_password');
       }
       document.getElementById('authUsername').value = '';
       document.getElementById('authPassword').value = '';
@@ -899,10 +901,8 @@ function openAuthModal() {
   document.getElementById('authModal').setAttribute('aria-hidden', 'false');
   document.getElementById('authError').textContent = '';
   const savedEmail = localStorage.getItem('remembered_email');
-  const savedPass = localStorage.getItem('remembered_password');
   if (savedEmail) {
     document.getElementById('authUsername').value = savedEmail;
-    if (savedPass) document.getElementById('authPassword').value = savedPass;
     document.getElementById('rememberMe').checked = true;
     document.getElementById('authPassword').focus();
   } else {
@@ -975,9 +975,12 @@ function renderCards() {
     card.rarity.toLowerCase().includes(query) ||
     card.number.toLowerCase().includes(query)
   );
-  const filtered = filterStatus === "acquired" ? allCards.filter(c => getAcquiredCards().includes(c.id)) :
-                   filterStatus === "missing"  ? allCards.filter(c => !getAcquiredCards().includes(c.id)) :
-                   allCards;
+  const typeFiltered = !filterType ? allCards : allCards.filter(c => c.type === filterType);
+  const rarityFiltered = !filterRarity ? typeFiltered : typeFiltered.filter(c => c.rarity === filterRarity);
+  const stageFiltered = !filterStage ? rarityFiltered : rarityFiltered.filter(c => c.stage === filterStage);
+  const filtered = filterStatus === "acquired" ? stageFiltered.filter(c => getAcquiredCards().includes(c.id)) :
+                   filterStatus === "missing"  ? stageFiltered.filter(c => !getAcquiredCards().includes(c.id)) :
+                   stageFiltered;
 
   const resultsEl = document.getElementById('resultsCount');
   if (resultsEl) resultsEl.textContent = `Exibindo ${filtered.length} de ${currentCards.length} cartas`;
@@ -1015,6 +1018,9 @@ function renderCards() {
           if (f === "all") {
             filterStatus = "";
             searchFilter = "";
+            filterType = "";
+            filterRarity = "";
+            filterStage = "";
             const inp = getSearchEl(); if (inp) inp.value = "";
           } else {
             filterStatus = filterStatus === f ? "" : f;
@@ -1025,7 +1031,29 @@ function renderCards() {
       });
       const bulkBar = document.querySelector(".bulk-bar");
       if (bulkBar) {
-        bulkBar.insertAdjacentHTML("afterend", `<div class="card-index-bar" id="cardIndexBar"></div>`);
+        const types = [...new Set(currentCards.map(c => c.type))].sort();
+        const rarities = [...new Set(currentCards.map(c => c.rarity))].sort();
+        const stages = [...new Set(currentCards.map(c => c.stage))].sort();
+        bulkBar.insertAdjacentHTML("afterend", `
+          <div class="filter-row" id="filterRow">
+            <select id="filterType" aria-label="Filtrar por tipo">
+              <option value="">Tipo: Todos</option>
+              ${types.map(t => `<option value="${t}"${filterType === t ? ' selected' : ''}>${t}</option>`).join('')}
+            </select>
+            <select id="filterRarity" aria-label="Filtrar por raridade">
+              <option value="">Raridade: Todas</option>
+              ${rarities.map(r => `<option value="${r}"${filterRarity === r ? ' selected' : ''}>${r}</option>`).join('')}
+            </select>
+            <select id="filterStage" aria-label="Filtrar por estágio">
+              <option value="">Estágio: Todos</option>
+              ${stages.map(s => `<option value="${s}"${filterStage === s ? ' selected' : ''}>${s}</option>`).join('')}
+            </select>
+          </div>
+          <div class="card-index-bar" id="cardIndexBar"></div>
+        `);
+        document.getElementById('filterType')?.addEventListener('change', e => { filterType = e.target.value; renderCards(); });
+        document.getElementById('filterRarity')?.addEventListener('change', e => { filterRarity = e.target.value; renderCards(); });
+        document.getElementById('filterStage')?.addEventListener('change', e => { filterStage = e.target.value; renderCards(); });
       }
     }
   } else {
@@ -1035,6 +1063,28 @@ function renderCards() {
       const isActive = btn.dataset.filter === "all" ? !filterStatus : btn.dataset.filter === filterStatus;
       btn.classList.toggle("active", isActive);
     });
+  }
+
+  const filterRow2 = document.getElementById('filterRow');
+  if (filterRow2) {
+    const types2 = [...new Set(currentCards.map(c => c.type))].sort();
+    const rarities2 = [...new Set(currentCards.map(c => c.rarity))].sort();
+    const stages2 = [...new Set(currentCards.map(c => c.stage))].sort();
+    const selType2 = document.getElementById('filterType');
+    const selRarity2 = document.getElementById('filterRarity');
+    const selStage2 = document.getElementById('filterStage');
+    if (selType2) {
+      selType2.innerHTML = `<option value="">Tipo: Todos</option>${types2.map(t => `<option value="${t}">${t}</option>`).join('')}`;
+      if (filterType) selType2.value = filterType;
+    }
+    if (selRarity2) {
+      selRarity2.innerHTML = `<option value="">Raridade: Todas</option>${rarities2.map(r => `<option value="${r}">${r}</option>`).join('')}`;
+      if (filterRarity) selRarity2.value = filterRarity;
+    }
+    if (selStage2) {
+      selStage2.innerHTML = `<option value="">Estágio: Todos</option>${stages2.map(s => `<option value="${s}">${s}</option>`).join('')}`;
+      if (filterStage) selStage2.value = filterStage;
+    }
   }
 
   const indexBar = document.getElementById("cardIndexBar");
@@ -1497,6 +1547,21 @@ function restoreAdminMenuState() {
   if (wasVisible && gearBtn && !gearBtn.classList.contains('hidden')) {
     setAdminMenuVisible(true);
   }
+}
+
+// --- Scroll to top ---
+const scrollBtn = document.getElementById('scrollTopBtn');
+if (scrollBtn) {
+  let scrollTimer;
+  window.addEventListener('scroll', () => {
+    clearTimeout(scrollTimer);
+    scrollTimer = setTimeout(() => {
+      scrollBtn.classList.toggle('visible', window.scrollY > 400);
+    }, 100);
+  }, { passive: true });
+  scrollBtn.addEventListener('click', () => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  });
 }
 
 // --- Entry point ---

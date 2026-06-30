@@ -12,6 +12,11 @@ function authRequired(req, res, next) {
   }
 }
 
+function adminRequired(req, res, next) {
+  if (!req.user || !req.user.is_admin) return res.status(403).json({ error: 'Admin access required' });
+  next();
+}
+
 module.exports = function (app) {
   const getDb = () => app.locals.db;
 
@@ -177,7 +182,7 @@ module.exports = function (app) {
   });
 
   // --- Admin: update expansion ---
-  app.patch('/api/admin/expansoes/:id', authRequired, async (req, res) => {
+  app.patch('/api/admin/expansoes/:id', authRequired, adminRequired, async (req, res) => {
     try {
       const db = getDb();
       const { id } = req.params;
@@ -195,7 +200,7 @@ module.exports = function (app) {
   });
 
   // --- Admin: delete expansion ---
-  app.delete('/api/admin/expansoes/:id', authRequired, async (req, res) => {
+  app.delete('/api/admin/expansoes/:id', authRequired, adminRequired, async (req, res) => {
     try {
       const db = getDb();
       const { id } = req.params;
@@ -212,7 +217,7 @@ module.exports = function (app) {
   });
 
   // --- Admin: create expansion ---
-  app.post('/api/admin/expansoes', authRequired, async (req, res) => {
+  app.post('/api/admin/expansoes', authRequired, adminRequired, async (req, res) => {
     try {
       const db = getDb();
       const { name, colecao_id, year, description, pais_id, copy_cards_from_expansao_id } = req.body;
@@ -236,7 +241,7 @@ module.exports = function (app) {
   });
 
   // --- Admin: countries ---
-  app.get('/api/admin/paises', authRequired, async (req, res) => {
+  app.get('/api/admin/paises', authRequired, adminRequired, async (req, res) => {
     try {
       const db = getDb();
       const rows = await db.all(`SELECT id, name, continent, language FROM ${T('paises')} ORDER BY id`);
@@ -245,7 +250,7 @@ module.exports = function (app) {
   });
 
   // --- Users list ---
-  app.get('/api/users', authRequired, async (req, res) => {
+  app.get('/api/users', authRequired, adminRequired, async (req, res) => {
     try {
       const db = getDb();
       const rows = await db.all(`SELECT username, name, created_at FROM ${T('users')} ORDER BY created_at`);

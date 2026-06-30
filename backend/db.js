@@ -55,9 +55,14 @@ async function createTables() {
       username TEXT NOT NULL UNIQUE,
       name TEXT NOT NULL DEFAULT '',
       password TEXT NOT NULL,
+      is_admin BOOLEAN NOT NULL DEFAULT FALSE,
       created_at TIMESTAMP DEFAULT NOW()
     )
   `);
+  // Ensure is_admin column exists (for existing databases)
+  try {
+    await pool.query(`ALTER TABLE ${T('users')} ADD COLUMN is_admin BOOLEAN NOT NULL DEFAULT FALSE`);
+  } catch (_) {}
 
   const hasOld = await pool.query(
     `SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = $1)`,

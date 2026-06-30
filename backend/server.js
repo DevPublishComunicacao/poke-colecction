@@ -1,6 +1,5 @@
 const express = require('express');
 const path = require('path');
-const fs = require('fs');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 
@@ -11,15 +10,7 @@ const { seedPerfectOrder } = require('./seed-perfect-order');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-const JWT_SECRET = process.env.JWT_SECRET || (() => {
-  const keyFile = path.join(__dirname, '..', '.jwt_secret');
-  try {
-    if (fs.existsSync(keyFile)) return fs.readFileSync(keyFile, 'utf8').trim();
-    const key = crypto.randomBytes(32).toString('hex');
-    fs.writeFileSync(keyFile, key);
-    return key;
-  } catch (_) { return crypto.randomBytes(32).toString('hex'); }
-})();
+const JWT_SECRET = process.env.JWT_SECRET || crypto.randomBytes(32).toString('hex');
 
 app.use(express.json());
 app.use(express.static(path.join(__dirname, '..', 'frontend')));
@@ -48,11 +39,13 @@ async function main() {
   const database = await initDatabase();
   global.__db = database;
   app.locals.db = database;
-  await seedDatabase(database);
-  await seedPerfectOrder(database).catch(e => console.error('Perfect Order seed:', e.message));
   app.listen(PORT, '0.0.0.0', () => {
     console.log('PokéCollection server running on http://localhost:' + PORT + ' (PostgreSQL)');
   });
+  // Seed in background so health check passes immediately
+  seedDatabase(database).then(() =>
+    seedPerfectOrder(database).catch(e => console.error('Perfect Order seed:', e.message))
+  ).catch(e => console.error('Seed error:', e.message));
 }
 
 main().catch(e => { console.error('Failed to start:', e); process.exit(1); });

@@ -18,9 +18,11 @@ module.exports = function (app) {
       if (existing) return res.status(409).json({ error: 'Username already taken' });
       const id = generateUserId();
       const hash = bcrypt.hashSync(password, 10);
-      await db.run(`INSERT INTO ${T('users')} (id, username, name, password) VALUES ($1, $2, $3, $4)`, [id, username, displayName, hash]);
-      const token = req.jwt.sign({ userId: id, username, name: displayName }, req.jwtSecret, { expiresIn: '30d' });
-      res.status(201).json({ token, user: { id, username, name: displayName } });
+      const count = await db.get(`SELECT COUNT(*)::int AS cnt FROM ${T('users')}`);
+      const isAdmin = count.cnt === 0;
+      await db.run(`INSERT INTO ${T('users')} (id, username, name, password, is_admin) VALUES ($1, $2, $3, $4, $5)`, [id, username, displayName, hash, isAdmin]);
+      const token = req.jwt.sign({ userId: id, username, name: displayName, is_admin: isAdmin }, req.jwtSecret, { expiresIn: '30d' });
+      res.status(201).json({ token, user: { id, username, name: displayName, is_admin: isAdmin } });
     } catch (e) { res.status(500).json({ error: e.message }); }
   });
 
@@ -31,8 +33,8 @@ module.exports = function (app) {
       if (!username || !password) return res.status(400).json({ error: 'Username and password required' });
       const user = await db.get(`SELECT * FROM ${T('users')} WHERE username = $1`, [username]);
       if (!user || !bcrypt.compareSync(password, user.password)) return res.status(401).json({ error: 'Invalid username or password' });
-      const token = req.jwt.sign({ userId: user.id, username: user.username, name: user.name }, req.jwtSecret, { expiresIn: '30d' });
-      res.json({ token, user: { id: user.id, username: user.username, name: user.name } });
+      const token = req.jwt.sign({ userId: user.id, username: user.username, name: user.name, is_admin: user.is_admin }, req.jwtSecret, { expiresIn: '30d' });
+      res.json({ token, user: { id: user.id, username: user.username, name: user.name, is_admin: user.is_admin } });
     } catch (e) { res.status(500).json({ error: e.message }); }
   });
 };

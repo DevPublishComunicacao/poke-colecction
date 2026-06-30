@@ -1,0 +1,24 @@
+services:
+  - type: web
+    name: poke-coleccion
+    runtime: node
+    repo: https://github.com/DevPublishComunicacao/poke-colecction
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_VERSION
+        value: 22
+      - key: JWT_SECRET
+        generateValue: true
+      - key: DATABASE_URL
+        fromDatabase:
+          name: poke-coleccion-db
+          property: connectionString
+
+databases:
+  - name: poke-coleccion-db
+    plan: free
+    databaseName: pokecollection
+    user: pokecollection
