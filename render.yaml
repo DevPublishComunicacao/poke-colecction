@@ -16,6 +16,8 @@ services:
         fromDatabase:
           name: poke-coleccion-db
           property: connectionString
+      - key: ADMIN_USERNAME
+        value: dev.publishcomunicacao@gmail.com
 
 databases:
   - name: poke-coleccion-db

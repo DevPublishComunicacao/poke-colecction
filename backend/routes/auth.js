@@ -33,8 +33,8 @@ if (pwErrors.length) return res.status(400).json({ error: 'Senha deve ter: ' + p
       if (existing) return res.status(409).json({ error: 'Username already taken' });
       const id = generateUserId();
       const hash = bcrypt.hashSync(password, 10);
-      const count = await db.get(`SELECT COUNT(*)::int AS cnt FROM ${T('users')}`);
-      const isAdmin = count.cnt === 0;
+      const adminUsers = (process.env.ADMIN_USERNAME || '').split(',').map(u => u.trim().toLowerCase()).filter(Boolean);
+      const isAdmin = adminUsers.includes(username.toLowerCase());
       await db.run(`INSERT INTO ${T('users')} (id, username, name, password, is_admin) VALUES ($1, $2, $3, $4, $5)`, [id, username, displayName, hash, isAdmin]);
       const token = req.jwt.sign({ userId: id, username, name: displayName, is_admin: isAdmin }, req.jwtSecret, { expiresIn: '30d' });
       res.status(201).json({ token, user: { id, username, name: displayName, is_admin: isAdmin } });
