@@ -579,19 +579,38 @@ async function initApp() {
 }
 
 function showLoginPrompt() {
+  document.querySelector('.user-area')?.classList.add('hidden');
+  document.querySelector('.cascade-selectors')?.classList.add('hidden');
+  document.querySelector('.collection-highlight')?.classList.add('hidden');
+  document.querySelector('.admin-menu')?.classList.add('hidden');
+  document.querySelector('.app-container')?.classList.add('login-mode');
+  const gridHeader = document.querySelector('.grid-header');
+  const cardsGrid = document.getElementById('cardsGrid');
+  if (gridHeader) gridHeader.style.display = 'none';
+  if (cardsGrid) cardsGrid.style.display = 'none';
   const container = document.getElementById('cardsDisplayContainer');
   if (!container) return;
-  container.innerHTML = `
-    <div class="login-prompt">
-      <i class="fa-solid fa-lock"></i>
-      <h2>Faça login para acessar o PokéCollection</h2>
-      <p>Você precisa estar logado para visualizar as coleções, expansões e cartas.</p>
-      <button class="auth-submit" onclick="openAuthModal()">Entrar / Registrar</button>
-    </div>
+  if (container.querySelector('.login-prompt')) return;
+  const prompt = document.createElement('div');
+  prompt.className = 'login-prompt';
+  prompt.innerHTML = `
+    <i class="fa-solid fa-lock"></i>
+    <p>Faça login para acessar suas coleções de cartas Pokémon.</p>
+    <button class="auth-submit" onclick="openAuthModal()">Entrar / Registrar</button>
   `;
+  container.appendChild(prompt);
 }
 
 function hideLoginPrompt() {
+  document.querySelector('.user-area')?.classList.remove('hidden');
+  document.querySelector('.cascade-selectors')?.classList.remove('hidden');
+  document.querySelector('.collection-highlight')?.classList.remove('hidden');
+  document.querySelector('.admin-menu')?.classList.remove('hidden');
+  document.querySelector('.app-container')?.classList.remove('login-mode');
+  const gridHeader = document.querySelector('.grid-header');
+  const cardsGrid = document.getElementById('cardsGrid');
+  if (gridHeader) gridHeader.style.display = '';
+  if (cardsGrid) cardsGrid.style.display = '';
   const prompt = document.querySelector('.login-prompt');
   if (prompt) prompt.remove();
 }

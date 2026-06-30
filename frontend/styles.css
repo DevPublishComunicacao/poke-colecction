@@ -1453,10 +1453,37 @@ body {
 }
 
 .login-prompt {
-    grid-column: 1 / -1;
     text-align: center;
-    padding: 120px 20px;
     color: var(--text-secondary);
+}
+
+.app-container.login-mode {
+    grid-template-columns: 1fr;
+}
+
+.app-container.login-mode .app-header {
+    border: none;
+    padding: 30px 20px 10px;
+    align-items: center;
+    text-align: center;
+    height: auto;
+    position: static;
+}
+
+.app-container.login-mode .app-header .brand h1 {
+    font-size: 28px;
+}
+
+.app-container.login-mode .cards-display {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 0;
+    flex: 1;
+}
+
+.app-container.login-mode .cards-display .login-prompt {
+    padding: 0 20px;
 }
 
 .login-prompt i {
