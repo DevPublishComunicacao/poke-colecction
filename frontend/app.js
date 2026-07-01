@@ -596,8 +596,9 @@ function showLoginPrompt() {
   prompt.innerHTML = `
     <i class="fa-solid fa-lock"></i>
     <p>Faça login para acessar suas coleções de cartas Pokémon.</p>
-    <button class="auth-submit" onclick="openAuthModal()">Entrar / Registrar</button>
+    <button class="auth-submit" id="loginPromptBtn">Entrar / Registrar</button>
   `;
+  prompt.querySelector('#loginPromptBtn').addEventListener('click', openAuthModal);
   container.appendChild(prompt);
 }
 
