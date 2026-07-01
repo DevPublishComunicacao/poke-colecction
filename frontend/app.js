@@ -760,6 +760,7 @@ function initAuth() {
       clearAuth();
       _stockCache = {};
       _acquiredCache = [];
+      resetAllDropdowns();
       showLoginPrompt();
       return;
     }
