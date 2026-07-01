@@ -506,7 +506,7 @@ async function initApp() {
   // Fetch colecoes
   try {
     const resp = await fetch('/api/colecoes', { headers: authHeaders() });
-    if (!resp.ok) { showLoginPrompt(); return; }
+    if (!resp.ok) { if (loader) loader.style.display = 'none'; showLoginPrompt(); return; }
     colecoes = await resp.json();
   } catch (e) { colecoes = []; }
 
